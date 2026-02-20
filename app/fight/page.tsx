@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSkull } from "@fortawesome/free-solid-svg-icons";
 
 type Character = {
   _id: string;
@@ -37,6 +39,7 @@ export default function FightPage() {
   const [opponentHitPoints, setOpponentHitPoints] = useState<Record<string, string>>({});
   const [combatants, setCombatants] = useState<{ id: string; name: string; initiative: number }[]>([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  const [incapacitatedIds, setIncapacitatedIds] = useState<Set<string>>(new Set());
   const [loadingEncounters, setLoadingEncounters] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(true);
 
@@ -48,6 +51,7 @@ export default function FightPage() {
   useEffect(() => {
     setCombatants([]);
     setCurrentTurnIndex(0);
+    setIncapacitatedIds(new Set());
   }, [selectedEncounterId]);
 
   const fetchEncounters = useCallback(() => {
@@ -97,6 +101,20 @@ export default function FightPage() {
         : [...prev, { id, name, initiative }];
       return next.sort((a, b) => b.initiative - a.initiative);
     });
+  };
+
+  const removeFromCombatants = (id: string) => {
+    setIncapacitatedIds((prev) => new Set(prev).add(id));
+    const removedIndex = combatants.findIndex((c) => c.id === id);
+    const next = combatants.filter((c) => c.id !== id);
+    setCombatants(next);
+    if (removedIndex >= 0) {
+      if (removedIndex < currentTurnIndex) {
+        setCurrentTurnIndex((i) => Math.max(0, i - 1));
+      } else if (removedIndex === currentTurnIndex || currentTurnIndex >= next.length) {
+        setCurrentTurnIndex(Math.min(currentTurnIndex, Math.max(0, next.length - 1)));
+      }
+    }
   };
 
   const characterParticipants = characters.map((c) => ({
@@ -151,7 +169,7 @@ export default function FightPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(240px,280px)_1fr_minmax(280px,360px)]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,380px)_1fr_minmax(280px,360px)]">
           {/* Left: Encounter selector, or opponents when encounter chosen */}
           <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             {selectedEncounterId ? (
@@ -175,18 +193,20 @@ export default function FightPage() {
                     {opponentParticipants.map(({ id, name, initiativeBonus, hitPoints }) => {
                       const isHighlighted = highlightedCombatantIds.has(id);
                       const notInCombat = phase === "Combat" && !combatantIds.has(id);
+                      const isIncapacitated = phase === "Combat" && incapacitatedIds.has(id);
+                      const isGreyed = notInCombat || isIncapacitated;
                       return (
                       <li
                         key={id}
                         className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${
                           isHighlighted
                             ? "bg-amber-100 ring-1 ring-amber-400 dark:bg-amber-900/30 dark:ring-amber-500"
-                            : notInCombat
+                            : isGreyed
                               ? "bg-zinc-100 opacity-60 dark:bg-zinc-800/30 dark:opacity-60"
                               : "bg-zinc-50 dark:bg-zinc-800/50"
                         }`}
                       >
-                        <span className={`min-w-0 truncate text-sm font-medium ${notInCombat ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                        <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
                           {name}
                         </span>
                         {phase === "Initiative" ? (
@@ -198,17 +218,31 @@ export default function FightPage() {
                             Roll
                           </button>
                         ) : phase === "Combat" ? (
-                          <label className="flex shrink-0 items-center gap-1">
-                            <span className="sr-only">Hit points for {name}</span>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              className="w-14 rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                              value={opponentHitPoints[id] ?? String(hitPoints)}
-                              onChange={(e) => setOpponentHP(id, e.target.value)}
-                              placeholder="—"
-                            />
-                          </label>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <label className="flex items-center gap-1">
+                              <span className="sr-only">Hit points for {name}</span>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                className="w-14 rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                                value={opponentHitPoints[id] ?? String(hitPoints)}
+                                onChange={(e) => setOpponentHP(id, e.target.value)}
+                                placeholder="—"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => !incapacitatedIds.has(id) && removeFromCombatants(id)}
+                              className="rounded p-1 transition-colors hover:opacity-80"
+                              title={isIncapacitated ? "Incapacitated" : "Mark incapacitated"}
+                              aria-label={isIncapacitated ? `${name} is incapacitated` : `Mark ${name} incapacitated`}
+                            >
+                              <FontAwesomeIcon
+                                icon={faSkull}
+                                className={`text-sm ${isIncapacitated ? "text-red-700 opacity-60 dark:text-red-800 dark:opacity-60" : "text-zinc-500 dark:text-zinc-400 hover:text-red-900 dark:hover:text-red-950"}`}
+                              />
+                            </button>
+                          </div>
                         ) : (
                           <label className="flex shrink-0 items-center gap-1">
                             <span className="sr-only">Initiative for {name}</span>
@@ -322,24 +356,40 @@ export default function FightPage() {
                 {characterParticipants.map(({ id, name, armorClass }) => {
                   const isHighlighted = highlightedCombatantIds.has(id);
                   const notInCombat = phase === "Combat" && !combatantIds.has(id);
+                  const isIncapacitated = phase === "Combat" && incapacitatedIds.has(id);
+                  const isGreyed = notInCombat || isIncapacitated;
                   return (
                   <li
                     key={id}
                     className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${
                       isHighlighted
                         ? "bg-amber-100 ring-1 ring-amber-400 dark:bg-amber-900/30 dark:ring-amber-500"
-                        : notInCombat
+                        : isGreyed
                           ? "bg-zinc-100 opacity-60 dark:bg-zinc-800/30 dark:opacity-60"
                           : "bg-zinc-50 dark:bg-zinc-800/50"
                     }`}
                   >
-                    <span className={`min-w-0 truncate text-sm font-medium ${notInCombat ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                    <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
                       {name}
                     </span>
                     {phase === "Combat" ? (
-                      <span className="shrink-0 text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
-                        AC {armorClass}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
+                          AC {armorClass}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => !incapacitatedIds.has(id) && removeFromCombatants(id)}
+                          className="rounded p-1 transition-colors hover:opacity-80"
+                          title={isIncapacitated ? "Incapacitated" : "Mark incapacitated"}
+                          aria-label={isIncapacitated ? `${name} is incapacitated` : `Mark ${name} incapacitated`}
+                        >
+                          <FontAwesomeIcon
+                            icon={faSkull}
+                            className={`text-sm ${isIncapacitated ? "text-red-700 opacity-60 dark:text-red-800 dark:opacity-60" : "text-zinc-500 dark:text-zinc-400 hover:text-red-900 dark:hover:text-red-950"}`}
+                          />
+                        </button>
+                      </div>
                     ) : (
                       <div className="flex shrink-0 items-center gap-2">
                         <label className="flex items-center gap-1">
