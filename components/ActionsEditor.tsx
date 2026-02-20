@@ -112,6 +112,19 @@ export default function ActionsEditor({
           </div>
           {a.type === "melee" && (
             <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-3">
+                <label className={labelClass}>Name</label>
+                <input
+                  type="text"
+                  value={(a as MeleeAction).name ?? ""}
+                  onChange={(e) =>
+                    setAction(i, { ...a, name: e.target.value || undefined })
+                  }
+                  placeholder="e.g. Longsword"
+                  className={inputClass}
+                  disabled={disabled}
+                />
+              </div>
               <div>
                 <label className={labelClass}>Attack bonus</label>
                 <input
@@ -159,6 +172,19 @@ export default function ActionsEditor({
           )}
           {a.type === "ranged" && (
             <div className="grid grid-cols-4 gap-2">
+              <div className="col-span-4">
+                <label className={labelClass}>Name</label>
+                <input
+                  type="text"
+                  value={(a as RangedAction).name ?? ""}
+                  onChange={(e) =>
+                    setAction(i, { ...a, name: e.target.value || undefined })
+                  }
+                  placeholder="e.g. Shortbow"
+                  className={inputClass}
+                  disabled={disabled}
+                />
+              </div>
               <div>
                 <label className={labelClass}>Attack bonus</label>
                 <input

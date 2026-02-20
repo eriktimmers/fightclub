@@ -17,8 +17,28 @@ import DiceRoller from "@/components/DiceRoller";
 import AttackRoller from "@/components/AttackRoller";
 import { useAppDispatch } from "@/store/hooks";
 import { setSides, setCount, setPerDieBonus, setTotalBonus, setResults } from "@/store/diceSlice";
-import type { OpponentAction } from "@/lib/types/actions";
+import { setCriticalRange, setBonus } from "@/store/attackSlice";
+import type { CriticalRange } from "@/store/attackSlice";
+import { ALLOWED_DIE_SIDES, type DieSides } from "@/lib/dice";
+import type { OpponentAction, MeleeAction, RangedAction, SpellAction } from "@/lib/types/actions";
 import { formatActionLabel } from "@/lib/types/actions";
+
+/** Parse "1d6+3", "2d8", "1d4-1" into dice roller state. */
+function parseDamage(damage: string): { count: number; sides: DieSides; totalBonus: number } | null {
+  const m = damage.trim().match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+  if (!m) return null;
+  const count = Math.max(1, Math.min(20, parseInt(m[1], 10)));
+  const sidesRaw = parseInt(m[2], 10);
+  const sides: DieSides = ALLOWED_DIE_SIDES.includes(sidesRaw as DieSides)
+    ? (sidesRaw as DieSides)
+    : 6;
+  const totalBonus = m[3]
+    ? m[3][0] === "+"
+      ? parseInt(m[3].slice(1), 10)
+      : -parseInt(m[3].slice(1), 10)
+    : 0;
+  return { count, sides, totalBonus };
+}
 
 type Character = {
   _id: string;
@@ -806,12 +826,74 @@ export default function FightPage() {
                       <div>
                         <dt className="font-medium text-zinc-500 dark:text-zinc-400">Actions</dt>
                         <dd className="mt-1 text-zinc-800 dark:text-zinc-200">
-                          <ul className="list-inside list-disc space-y-0.5">
-                            {opp.actions.map((action, i) => (
-                              <li key={i}>
-                                {formatActionLabel(action)}
-                              </li>
-                            ))}
+                          <ul className="list-none space-y-2">
+                            {opp.actions.map((action, i) => {
+                              const act = typeof action === "string" ? null : action;
+                              const isMelee = act?.type === "melee";
+                              const isRanged = act?.type === "ranged";
+                              const isSpell = act?.type === "spell";
+                              const actionName = act && (isMelee || isRanged)
+                                ? (act as MeleeAction | RangedAction).name ?? (isMelee ? "Melee" : "Ranged")
+                                : isSpell
+                                  ? (act as SpellAction).spellName ?? "Spell"
+                                  : null;
+                              const damageStr =
+                                act && (isMelee || isRanged)
+                                  ? (act as MeleeAction | RangedAction).damage
+                                  : isSpell
+                                    ? (act as SpellAction).damage
+                                    : undefined;
+                              const damageParsed = damageStr ? parseDamage(damageStr) : null;
+                              const openAttackRoller = () => {
+                                if (act && (isMelee || isRanged)) {
+                                  const a = act as MeleeAction | RangedAction;
+                                  dispatch(setBonus(a.attackBonus ?? 0));
+                                  const cr = (a.criticalRange === "18-20" || a.criticalRange === "19-20" || a.criticalRange === "20")
+                                    ? a.criticalRange as CriticalRange
+                                    : "none";
+                                  dispatch(setCriticalRange(cr));
+                                  setAttackModalOpen(true);
+                                }
+                              };
+                              const openDamageRoller = () => {
+                                if (damageParsed) {
+                                  dispatch(setSides(damageParsed.sides));
+                                  dispatch(setCount(damageParsed.count));
+                                  dispatch(setPerDieBonus(0));
+                                  dispatch(setTotalBonus(damageParsed.totalBonus));
+                                  dispatch(setResults([]));
+                                  setDiceModalOpen(true);
+                                }
+                              };
+                              return (
+                                <li key={i} className="flex flex-wrap items-center gap-2">
+                                  {actionName != null ? (
+                                    <span className="font-medium">{actionName}</span>
+                                  ) : null}
+                                  <span className="text-zinc-600 dark:text-zinc-400">
+                                    {formatActionLabel(action)}
+                                  </span>
+                                  {(isMelee || isRanged) ? (
+                                    <button
+                                      type="button"
+                                      onClick={openAttackRoller}
+                                      className="rounded bg-zinc-800 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                                    >
+                                      Attack
+                                    </button>
+                                  ) : null}
+                                  {damageParsed ? (
+                                    <button
+                                      type="button"
+                                      onClick={openDamageRoller}
+                                      className="rounded border border-zinc-400 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-500 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                                    >
+                                      Damage
+                                    </button>
+                                  ) : null}
+                                </li>
+                              );
+                            })}
                           </ul>
                         </dd>
                       </div>

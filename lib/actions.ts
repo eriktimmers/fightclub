@@ -53,6 +53,7 @@ function normalizeAction(a: unknown): OpponentAction | null {
       if (!validateMelee(o)) return null;
       return {
         type: "melee",
+        name: parseString(o.name),
         attackBonus: parseNumber(o.attackBonus),
         criticalRange: parseString(o.criticalRange),
         damage: parseString(o.damage),
@@ -61,6 +62,7 @@ function normalizeAction(a: unknown): OpponentAction | null {
       if (!validateRanged(o)) return null;
       return {
         type: "ranged",
+        name: parseString(o.name),
         attackBonus: parseNumber(o.attackBonus),
         criticalRange: parseString(o.criticalRange),
         damage: parseString(o.damage),

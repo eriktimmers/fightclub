@@ -2,6 +2,7 @@ export type ActionType = "melee" | "ranged" | "spell" | "special";
 
 export type MeleeAction = {
   type: "melee";
+  name?: string;
   attackBonus?: number;
   criticalRange?: string;
   damage?: string;
@@ -9,6 +10,7 @@ export type MeleeAction = {
 
 export type RangedAction = {
   type: "ranged";
+  name?: string;
   attackBonus?: number;
   criticalRange?: string;
   damage?: string;
@@ -45,14 +47,14 @@ export function formatActionLabel(action: OpponentAction | string): string {
   if (typeof action === "string") return action;
   switch (action.type) {
     case "melee": {
-      const parts = ["Melee"];
+      const parts = [action.name ?? "Melee"];
       if (action.attackBonus != null) parts.push(`+${action.attackBonus}`);
       if (action.criticalRange) parts.push(`crit ${action.criticalRange}`);
       if (action.damage) parts.push(action.damage);
       return parts.join(" ");
     }
     case "ranged": {
-      const parts = ["Ranged"];
+      const parts = [action.name ?? "Ranged"];
       if (action.attackBonus != null) parts.push(`+${action.attackBonus}`);
       if (action.criticalRange) parts.push(`crit ${action.criticalRange}`);
       if (action.damage) parts.push(action.damage);
