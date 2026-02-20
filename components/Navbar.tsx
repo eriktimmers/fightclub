@@ -34,7 +34,7 @@ export default function Navbar() {
               Characters
             </Link>
             <Link 
-              href="/opponents" 
+              href="/opponents/list" 
               className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             >
               Opponents
@@ -46,7 +46,7 @@ export default function Navbar() {
               Encounters
             </Link>
             <Link 
-              href="/spells" 
+              href="/spells/list" 
               className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
             >
               Spells
