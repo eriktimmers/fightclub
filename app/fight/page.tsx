@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faDiceFive,
   faEye,
+  faHandFist,
   faFlaskVial,
   faLink,
   faPaperPlane,
@@ -13,6 +14,7 @@ import {
   faUserSecret,
 } from "@fortawesome/free-solid-svg-icons";
 import DiceRoller from "@/components/DiceRoller";
+import AttackRoller from "@/components/AttackRoller";
 import { useAppDispatch } from "@/store/hooks";
 import { setSides, setCount, setPerDieBonus, setTotalBonus, setResults } from "@/store/diceSlice";
 
@@ -70,6 +72,7 @@ export default function FightPage() {
   const [loadingEncounters, setLoadingEncounters] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(true);
   const [diceModalOpen, setDiceModalOpen] = useState(false);
+  const [attackModalOpen, setAttackModalOpen] = useState(false);
   const [opponentDetailId, setOpponentDetailId] = useState<string | null>(null);
   const [fullOpponent, setFullOpponent] = useState<Opponent | null>(null);
   const [fullOpponentLoading, setFullOpponentLoading] = useState(false);
@@ -298,6 +301,15 @@ export default function FightPage() {
           >
             <FontAwesomeIcon icon={faDiceFive} className="text-base" />
             Dice Roller
+          </button>
+          <button
+            type="button"
+            onClick={() => setAttackModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            aria-label="Open attack roller"
+          >
+            <FontAwesomeIcon icon={faHandFist} className="text-base" />
+            Attack Roller
           </button>
         </div>
 
@@ -903,6 +915,27 @@ export default function FightPage() {
                 Close
               </button>
               <DiceRoller />
+            </div>
+          </div>
+        ) : null}
+
+        {/* Attack roller modal */}
+        {attackModalOpen ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Attack roller"
+          >
+            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <button
+                type="button"
+                onClick={() => setAttackModalOpen(false)}
+                className="absolute right-4 top-4 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                Close
+              </button>
+              <AttackRoller />
             </div>
           </div>
         ) : null}
