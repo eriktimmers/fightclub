@@ -13,6 +13,8 @@ import {
   faUserSecret,
 } from "@fortawesome/free-solid-svg-icons";
 import DiceRoller from "@/components/DiceRoller";
+import { useAppDispatch } from "@/store/hooks";
+import { setSides, setCount, setPerDieBonus, setTotalBonus, setResults } from "@/store/diceSlice";
 
 type Character = {
   _id: string;
@@ -50,6 +52,7 @@ const PHASES = ["Initiative", "Combat", "Resolution"] as const;
 type Phase = (typeof PHASES)[number];
 
 export default function FightPage() {
+  const dispatch = useAppDispatch();
   const [phase, setPhase] = useState<Phase>("Initiative");
   const [encounters, setEncounters] = useState<Encounter[]>([]);
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null);
@@ -762,7 +765,27 @@ export default function FightPage() {
                     <div>
                       <dt className="font-medium text-zinc-500 dark:text-zinc-400">Saving throws</dt>
                       <dd className="text-zinc-800 dark:text-zinc-200">
-                        Reflex {opp.savingThrowDex ?? 0}, Fortitude {opp.savingThrowCon ?? 0}, Will {opp.savingThrowWis ?? 0}
+                        {[
+                          { label: "Reflex", bonus: opp.savingThrowDex ?? 0 },
+                          { label: "Fortitude", bonus: opp.savingThrowCon ?? 0 },
+                          { label: "Will", bonus: opp.savingThrowWis ?? 0 },
+                        ].map(({ label, bonus }) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() => {
+                              dispatch(setSides(20));
+                              dispatch(setCount(1));
+                              dispatch(setPerDieBonus(bonus));
+                              dispatch(setTotalBonus(0));
+                              dispatch(setResults([]));
+                              setDiceModalOpen(true);
+                            }}
+                            className="mr-2 rounded px-1.5 py-0.5 font-medium text-zinc-800 underline-offset-2 hover:bg-zinc-200 hover:underline dark:text-zinc-200 dark:hover:bg-zinc-700"
+                          >
+                            {label} {bonus}
+                          </button>
+                        ))}
                       </dd>
                     </div>
                     {opp.actions?.length > 0 ? (
