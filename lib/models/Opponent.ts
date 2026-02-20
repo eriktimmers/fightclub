@@ -7,6 +7,7 @@ const actionSchema = new mongoose.Schema(
       required: true,
       enum: ["melee", "ranged", "spell", "special"],
     },
+    name: String,
     attackBonus: Number,
     criticalRange: String,
     damage: String,

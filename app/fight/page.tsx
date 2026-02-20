@@ -859,8 +859,9 @@ export default function FightPage() {
                                 if (damageParsed) {
                                   dispatch(setSides(damageParsed.sides));
                                   dispatch(setCount(damageParsed.count));
-                                  dispatch(setPerDieBonus(0));
-                                  dispatch(setTotalBonus(damageParsed.totalBonus));
+                                  const oneDie = damageParsed.count === 1;
+                                  dispatch(setPerDieBonus(oneDie ? damageParsed.totalBonus : 0));
+                                  dispatch(setTotalBonus(oneDie ? 0 : damageParsed.totalBonus));
                                   dispatch(setResults([]));
                                   setDiceModalOpen(true);
                                 }
