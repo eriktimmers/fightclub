@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLink, faSkull } from "@fortawesome/free-solid-svg-icons";
+import { faEye, faLink, faSkull } from "@fortawesome/free-solid-svg-icons";
 
 type Character = {
   _id: string;
@@ -41,6 +41,8 @@ export default function FightPage() {
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [incapacitatedIds, setIncapacitatedIds] = useState<Set<string>>(new Set());
   const [links, setLinks] = useState<Record<string, string>>({});
+  const [statusInfo, setStatusInfo] = useState<Record<string, string>>({});
+  const [statusPopupId, setStatusPopupId] = useState<string | null>(null);
   const [loadingEncounters, setLoadingEncounters] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(true);
 
@@ -54,6 +56,8 @@ export default function FightPage() {
     setCurrentTurnIndex(0);
     setIncapacitatedIds(new Set());
     setLinks({});
+    setStatusInfo({});
+    setStatusPopupId(null);
   }, [selectedEncounterId]);
 
   const fetchEncounters = useCallback(() => {
@@ -272,8 +276,17 @@ export default function FightPage() {
                               />
                             </button>
                           ) : null}
-                          <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                          <span
+                            role={phase === "Combat" ? "button" : undefined}
+                            tabIndex={phase === "Combat" ? 0 : undefined}
+                            onClick={phase === "Combat" ? () => setStatusPopupId(id) : undefined}
+                            onKeyDown={phase === "Combat" ? (e) => e.key === "Enter" && setStatusPopupId(id) : undefined}
+                            className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"} ${phase === "Combat" ? "cursor-pointer hover:underline" : ""}`}
+                          >
                             {name}
+                            {phase === "Combat" && statusInfo[id]?.trim() ? (
+                              <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
+                            ) : null}
                           </span>
                         </div>
                         {phase === "Initiative" ? (
@@ -400,8 +413,17 @@ export default function FightPage() {
                           : "bg-zinc-50 dark:bg-zinc-800/50"
                       }`}
                     >
-                      <span className="min-w-0 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                      <span
+                        role={phase === "Combat" ? "button" : undefined}
+                        tabIndex={phase === "Combat" ? 0 : undefined}
+                        onClick={phase === "Combat" ? () => setStatusPopupId(id) : undefined}
+                        onKeyDown={phase === "Combat" ? (e) => e.key === "Enter" && setStatusPopupId(id) : undefined}
+                        className={`min-w-0 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200 ${phase === "Combat" ? "cursor-pointer hover:underline" : ""}`}
+                      >
                         {name}
+                        {phase === "Combat" && statusInfo[id]?.trim() ? (
+                          <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
+                        ) : null}
                       </span>
                       <span className="shrink-0 text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
                         {initiative}
@@ -490,8 +512,17 @@ export default function FightPage() {
                           />
                         </button>
                       ) : null}
-                      <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                      <span
+                        role={phase === "Combat" ? "button" : undefined}
+                        tabIndex={phase === "Combat" ? 0 : undefined}
+                        onClick={phase === "Combat" ? () => setStatusPopupId(id) : undefined}
+                        onKeyDown={phase === "Combat" ? (e) => e.key === "Enter" && setStatusPopupId(id) : undefined}
+                        className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"} ${phase === "Combat" ? "cursor-pointer hover:underline" : ""}`}
+                      >
                         {name}
+                        {phase === "Combat" && statusInfo[id]?.trim() ? (
+                          <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
+                        ) : null}
                       </span>
                     </div>
                     {phase === "Combat" ? (
@@ -554,6 +585,45 @@ export default function FightPage() {
             )}
           </section>
         </div>
+
+        {/* Status popup (Combat phase) */}
+        {statusPopupId && phase === "Combat" ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="status-popup-title"
+          >
+            <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <h2 id="status-popup-title" className="mb-2 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                Status — {combatants.find((c) => c.id === statusPopupId)?.name ?? opponentParticipants.find((p) => p.id === statusPopupId)?.name ?? characterParticipants.find((p) => p.id === statusPopupId)?.name ?? "Combatant"}
+              </h2>
+              <textarea
+                value={statusInfo[statusPopupId] ?? ""}
+                onChange={(e) => setStatusInfo((prev) => ({ ...prev, [statusPopupId]: e.target.value }))}
+                className="mb-4 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                rows={4}
+                placeholder="Add status notes…"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStatusPopupId(null)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusPopupId(null)}
+                  className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
