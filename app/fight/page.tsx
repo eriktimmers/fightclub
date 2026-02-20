@@ -34,7 +34,9 @@ export default function FightPage() {
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [initiatives, setInitiatives] = useState<Record<string, string>>({});
+  const [opponentHitPoints, setOpponentHitPoints] = useState<Record<string, string>>({});
   const [combatants, setCombatants] = useState<{ id: string; name: string; initiative: number }[]>([]);
+  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [loadingEncounters, setLoadingEncounters] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(true);
 
@@ -45,6 +47,7 @@ export default function FightPage() {
 
   useEffect(() => {
     setCombatants([]);
+    setCurrentTurnIndex(0);
   }, [selectedEncounterId]);
 
   const fetchEncounters = useCallback(() => {
@@ -99,13 +102,32 @@ export default function FightPage() {
   const characterParticipants = characters.map((c) => ({
     id: `char-${c._id}`,
     name: c.name,
+    armorClass: c.armorClass,
   }));
 
   const opponentParticipants = opponents.map((o, i) => ({
     id: `opp-${selectedEncounterId}-${i}`,
     name: o.name,
     initiativeBonus: o.initiativeBonus ?? 0,
+    hitPoints: o.hitPoints,
   }));
+
+  const setOpponentHP = (id: string, value: string) => {
+    setOpponentHitPoints((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const maxInitiative = combatants.length > 0 ? Math.max(...combatants.map((c) => c.initiative)) : null;
+  const effectiveTurnIndex =
+    phase === "Combat" && combatants.length > 0
+      ? Math.min(currentTurnIndex, combatants.length - 1)
+      : 0;
+  const highlightedCombatantIds =
+    phase === "Combat" && combatants.length > 0
+      ? new Set([combatants[effectiveTurnIndex].id])
+      : new Set(
+          maxInitiative != null ? combatants.filter((c) => c.initiative === maxInitiative).map((c) => c.id) : []
+        );
+  const combatantIds = new Set(combatants.map((c) => c.id));
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -150,12 +172,21 @@ export default function FightPage() {
                   <p className="text-sm text-zinc-500">No opponents in this encounter.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {opponentParticipants.map(({ id, name, initiativeBonus }) => (
+                    {opponentParticipants.map(({ id, name, initiativeBonus, hitPoints }) => {
+                      const isHighlighted = highlightedCombatantIds.has(id);
+                      const notInCombat = phase === "Combat" && !combatantIds.has(id);
+                      return (
                       <li
                         key={id}
-                        className="flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50"
+                        className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${
+                          isHighlighted
+                            ? "bg-amber-100 ring-1 ring-amber-400 dark:bg-amber-900/30 dark:ring-amber-500"
+                            : notInCombat
+                              ? "bg-zinc-100 opacity-60 dark:bg-zinc-800/30 dark:opacity-60"
+                              : "bg-zinc-50 dark:bg-zinc-800/50"
+                        }`}
                       >
-                        <span className="min-w-0 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                        <span className={`min-w-0 truncate text-sm font-medium ${notInCombat ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
                           {name}
                         </span>
                         {phase === "Initiative" ? (
@@ -166,6 +197,18 @@ export default function FightPage() {
                           >
                             Roll
                           </button>
+                        ) : phase === "Combat" ? (
+                          <label className="flex shrink-0 items-center gap-1">
+                            <span className="sr-only">Hit points for {name}</span>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              className="w-14 rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                              value={opponentHitPoints[id] ?? String(hitPoints)}
+                              onChange={(e) => setOpponentHP(id, e.target.value)}
+                              placeholder="—"
+                            />
+                          </label>
                         ) : (
                           <label className="flex shrink-0 items-center gap-1">
                             <span className="sr-only">Initiative for {name}</span>
@@ -180,7 +223,8 @@ export default function FightPage() {
                           </label>
                         )}
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </>
@@ -213,31 +257,52 @@ export default function FightPage() {
 
           {/* Middle: Combatants in initiative order */}
           <section className="flex min-h-[320px] flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              {phase === "Initiative" ? "Combatants" : phase}
-            </h2>
-            {phase === "Initiative" && combatants.length > 0 ? (
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {phase === "Initiative" ? "Combatants" : phase}
+              </h2>
+              {phase === "Combat" && combatants.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentTurnIndex((i) => (i + 1) % combatants.length)}
+                  className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                >
+                  Next
+                </button>
+              )}
+            </div>
+            {combatants.length > 0 ? (
               <ul className="space-y-2">
-                {combatants.map(({ id, name, initiative }) => (
-                  <li
-                    key={id}
-                    className="flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50"
-                  >
-                    <span className="min-w-0 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                      {name}
-                    </span>
-                    <span className="shrink-0 text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
-                      {initiative}
-                    </span>
-                  </li>
-                ))}
+                {combatants.map(({ id, name, initiative }, index) => {
+                  const isHighlighted =
+                    phase === "Combat" ? index === effectiveTurnIndex : maxInitiative != null && initiative === maxInitiative;
+                  return (
+                    <li
+                      key={id}
+                      className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${
+                        isHighlighted
+                          ? "bg-amber-100 ring-1 ring-amber-400 dark:bg-amber-900/30 dark:ring-amber-500"
+                          : "bg-zinc-50 dark:bg-zinc-800/50"
+                      }`}
+                    >
+                      <span className="min-w-0 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                        {name}
+                      </span>
+                      <span className="shrink-0 text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
+                        {initiative}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-800/30">
                 <span className="text-sm text-zinc-400 dark:text-zinc-500">
                   {phase === "Initiative"
                     ? "Roll initiative for opponents to add them here (highest first)"
-                    : "(Reserved for later use)"}
+                    : phase === "Combat"
+                      ? "Add combatants in Initiative phase first"
+                      : "(Reserved for later use)"}
                 </span>
               </div>
             )}
@@ -254,36 +319,52 @@ export default function FightPage() {
               <p className="text-sm text-zinc-500">No characters yet.</p>
             ) : (
               <ul className="space-y-2">
-                {characterParticipants.map(({ id, name }) => (
+                {characterParticipants.map(({ id, name, armorClass }) => {
+                  const isHighlighted = highlightedCombatantIds.has(id);
+                  const notInCombat = phase === "Combat" && !combatantIds.has(id);
+                  return (
                   <li
                     key={id}
-                    className="flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50"
+                    className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 ${
+                      isHighlighted
+                        ? "bg-amber-100 ring-1 ring-amber-400 dark:bg-amber-900/30 dark:ring-amber-500"
+                        : notInCombat
+                          ? "bg-zinc-100 opacity-60 dark:bg-zinc-800/30 dark:opacity-60"
+                          : "bg-zinc-50 dark:bg-zinc-800/50"
+                    }`}
                   >
-                    <span className="min-w-0 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                    <span className={`min-w-0 truncate text-sm font-medium ${notInCombat ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
                       {name}
                     </span>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <label className="flex items-center gap-1">
-                        <span className="sr-only">Initiative for {name}</span>
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          className="w-14 rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                          value={initiatives[id] ?? ""}
-                          onChange={(e) => setInitiative(id, e.target.value)}
-                          placeholder="—"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => addCharacterToCombatants(id, name)}
-                        className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
-                      >
-                        Add
-                      </button>
-                    </div>
+                    {phase === "Combat" ? (
+                      <span className="shrink-0 text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
+                        AC {armorClass}
+                      </span>
+                    ) : (
+                      <div className="flex shrink-0 items-center gap-2">
+                        <label className="flex items-center gap-1">
+                          <span className="sr-only">Initiative for {name}</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            className="w-14 rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                            value={initiatives[id] ?? ""}
+                            onChange={(e) => setInitiative(id, e.target.value)}
+                            placeholder="—"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => addCharacterToCombatants(id, name)}
+                          className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </section>
