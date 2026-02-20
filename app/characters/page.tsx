@@ -26,7 +26,11 @@ export default function CharactersPage() {
       const res = await fetch("/api/characters");
       if (!res.ok) throw new Error("Failed to load characters");
       const data = await res.json();
-      setCharacters(data);
+      setCharacters(
+        (data as Character[]).sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+        )
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load characters");
     } finally {
