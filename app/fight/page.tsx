@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faLink, faSkull } from "@fortawesome/free-solid-svg-icons";
+import { faDiceFive, faEye, faLink, faSkull } from "@fortawesome/free-solid-svg-icons";
+import DiceRoller from "@/components/DiceRoller";
 
 type Character = {
   _id: string;
@@ -45,6 +46,8 @@ export default function FightPage() {
   const [statusPopupId, setStatusPopupId] = useState<string | null>(null);
   const [loadingEncounters, setLoadingEncounters] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(true);
+  const [diceModalOpen, setDiceModalOpen] = useState(false);
+  const [opponentDetailId, setOpponentDetailId] = useState<string | null>(null);
 
   const selectedEncounter = selectedEncounterId
     ? encounters.find((e) => e._id === selectedEncounterId) ?? null
@@ -142,6 +145,7 @@ export default function FightPage() {
     name: o.name,
     initiativeBonus: o.initiativeBonus ?? 0,
     hitPoints: o.hitPoints,
+    opponent: o,
   }));
 
   const setOpponentHP = (id: string, value: string) => {
@@ -202,11 +206,13 @@ export default function FightPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <div className="mx-auto max-w-[1400px] px-4 py-6">
-        <h1 className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Fight!
-        </h1>
-        <div className="mb-4 flex gap-2">
-          {PHASES.map((p) => (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              Fight!
+            </h1>
+            <div className="flex gap-2">
+              {PHASES.map((p) => (
             <button
               key={p}
               onClick={() => setPhase(p)}
@@ -217,8 +223,19 @@ export default function FightPage() {
               }`}
             >
               {p}
-            </button>
-          ))}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDiceModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            aria-label="Open dice roller"
+          >
+            <FontAwesomeIcon icon={faDiceFive} className="text-base" />
+            Dice Roller
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,380px)_1fr_minmax(280px,360px)]">
@@ -242,7 +259,7 @@ export default function FightPage() {
                   <p className="text-sm text-zinc-500">No opponents in this encounter.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {opponentParticipants.map(({ id, name, initiativeBonus, hitPoints }) => {
+                    {opponentParticipants.map(({ id, name, initiativeBonus, hitPoints, opponent: fullOpponent }) => {
                       const isHighlighted = highlightedCombatantIds.has(id);
                       const notInCombat = phase === "Combat" && !combatantIds.has(id);
                       const isIncapacitated = phase === "Combat" && incapacitatedIds.has(id);
@@ -279,8 +296,8 @@ export default function FightPage() {
                           <span
                             role={phase === "Combat" ? "button" : undefined}
                             tabIndex={phase === "Combat" ? 0 : undefined}
-                            onClick={phase === "Combat" ? () => setStatusPopupId(id) : undefined}
-                            onKeyDown={phase === "Combat" ? (e) => e.key === "Enter" && setStatusPopupId(id) : undefined}
+                            onClick={phase === "Combat" ? () => setOpponentDetailId(id) : undefined}
+                            onKeyDown={phase === "Combat" ? (e) => e.key === "Enter" && setOpponentDetailId(id) : undefined}
                             className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"} ${phase === "Combat" ? "cursor-pointer hover:underline" : ""}`}
                           >
                             {name}
@@ -586,6 +603,69 @@ export default function FightPage() {
           </section>
         </div>
 
+        {/* Opponent detail modal (Combat phase, left-panel opponents) */}
+        {opponentDetailId && phase === "Combat" ? (() => {
+          const opp = opponentParticipants.find((p) => p.id === opponentDetailId)?.opponent;
+          if (!opp) return null;
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="opponent-detail-title"
+            >
+              <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                <h2 id="opponent-detail-title" className="mb-3 text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+                  {opp.name}
+                </h2>
+                <dl className="space-y-2 text-sm">
+                  <div>
+                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Type</dt>
+                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.type}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Alignment</dt>
+                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.alignment}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Hit points</dt>
+                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.hitPoints}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Armor class</dt>
+                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.armorClass}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Initiative bonus</dt>
+                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.initiativeBonus ?? 0}</dd>
+                  </div>
+                  {opp.actions?.length > 0 ? (
+                    <div>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Actions</dt>
+                      <dd className="mt-1 text-zinc-800 dark:text-zinc-200">
+                        <ul className="list-inside list-disc space-y-0.5">
+                          {opp.actions.map((action, i) => (
+                            <li key={i}>{action}</li>
+                          ))}
+                        </ul>
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setOpponentDetailId(null)}
+                    className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })() : null}
+
         {/* Status popup (Combat phase) */}
         {statusPopupId && phase === "Combat" ? (
           <div
@@ -621,6 +701,27 @@ export default function FightPage() {
                   Save
                 </button>
               </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Dice roller modal */}
+        {diceModalOpen ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Dice roller"
+          >
+            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <button
+                type="button"
+                onClick={() => setDiceModalOpen(false)}
+                className="absolute right-4 top-4 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                Close
+              </button>
+              <DiceRoller />
             </div>
           </div>
         ) : null}
