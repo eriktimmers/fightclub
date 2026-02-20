@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import ActionsEditor, {
+  normalizeLegacyActions,
+} from "@/components/ActionsEditor";
+import type { OpponentAction } from "@/lib/types/actions";
 
 const DEFAULT_ABILITY = 11;
 const DEFAULT_SAVE = 0;
@@ -23,55 +27,10 @@ const inputClass =
 const labelClass =
   "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
 
-function ActionsEditor({
-  actions,
-  onChange,
-  disabled,
-}: {
-  actions: string[];
-  onChange: (actions: string[]) => void;
-  disabled?: boolean;
-}) {
-  const add = () => onChange([...actions, ""]);
-  const remove = (i: number) =>
-    onChange(actions.filter((_, idx) => idx !== i));
-  const set = (i: number, v: string) =>
-    onChange(actions.map((a, idx) => (idx === i ? v : a)));
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className={labelClass}>Actions</label>
-        <button
-          type="button"
-          onClick={add}
-          disabled={disabled || actions.length >= 20}
-          className="text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 disabled:opacity-50"
-        >
-          + Add action
-        </button>
-      </div>
-      {actions.map((a, i) => (
-        <div key={i} className="flex gap-2">
-          <input
-            type="text"
-            value={a}
-            onChange={(e) => set(i, e.target.value)}
-            placeholder={`Action ${i + 1}`}
-            className={inputClass}
-            disabled={disabled}
-          />
-          <button
-            type="button"
-            onClick={() => remove(i)}
-            disabled={disabled || actions.length <= 1}
-            className="shrink-0 rounded-lg border border-zinc-300 px-2.5 py-2 text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-    </div>
+function validActions(actions: OpponentAction[]): boolean {
+  if (actions.length === 0) return false;
+  return actions.some(
+    (a) => a.type !== "special" || (a.description?.trim() ?? "").length > 0
   );
 }
 
@@ -79,7 +38,9 @@ export default function OpponentsPage() {
   const [name, setName] = useState("");
   const [type, setType] = useState("");
   const [alignment, setAlignment] = useState("");
-  const [actions, setActions] = useState<string[]>([""]);
+  const [actions, setActions] = useState<OpponentAction[]>([
+    { type: "special", description: "" },
+  ]);
   const [hitPoints, setHitPoints] = useState("");
   const [armorClass, setArmorClass] = useState("");
   const [initiativeBonus, setInitiativeBonus] = useState("0");
@@ -95,14 +56,11 @@ export default function OpponentsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const validActions = (arr: string[]) =>
-    arr.filter((a) => a.trim() !== "").length > 0;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!validActions(actions)) {
-      setError("At least one action is required");
+      setError("At least one action is required (special actions need a description)");
       return;
     }
     setLoading(true);
@@ -114,7 +72,7 @@ export default function OpponentsPage() {
           name: name.trim(),
           type: type.trim(),
           alignment: alignment.trim(),
-          actions: actions.map((a) => a.trim()).filter(Boolean),
+          actions,
           hitPoints: Number(hitPoints),
           armorClass: Number(armorClass),
           initiativeBonus: initiativeBonus === "" ? 0 : Number(initiativeBonus),
@@ -136,7 +94,7 @@ export default function OpponentsPage() {
       setName("");
       setType("");
       setAlignment("");
-      setActions([""]);
+      setActions([{ type: "special", description: "" }]);
       setHitPoints("");
       setArmorClass("");
       setInitiativeBonus("0");

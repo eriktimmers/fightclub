@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Encounter from "@/lib/models/Encounter";
+import {
+  normalizeActionsForEncounter,
+  isLegacyActionsArray,
+  isStructuredActionsArray,
+} from "@/lib/actions";
+import type { OpponentAction } from "@/lib/types/actions";
 import mongoose from "mongoose";
 
 function isValidId(id: string): boolean {
@@ -10,30 +16,47 @@ function isValidId(id: string): boolean {
   );
 }
 
-function validateOpponentSnapshot(o: unknown): o is {
+type RawOpponentSnapshot = {
   _id: string;
   name: string;
   type: string;
   alignment: string;
-  actions: string[];
+  actions: unknown[];
   hitPoints: number;
   armorClass: number;
   initiativeBonus: number;
-} {
+};
+
+type OpponentSnapshot = RawOpponentSnapshot & { actions: OpponentAction[] };
+
+function validateOpponentSnapshot(o: unknown): o is RawOpponentSnapshot {
   const x = o as Record<string, unknown>;
-  return (
-    !!x &&
-    typeof x._id === "string" &&
-    typeof x.name === "string" &&
-    typeof x.type === "string" &&
-    typeof x.alignment === "string" &&
-    Array.isArray(x.actions) &&
-    (x.actions as unknown[]).every((a) => typeof a === "string") &&
-    typeof x.hitPoints === "number" &&
-    typeof x.armorClass === "number" &&
-    (x.initiativeBonus === undefined ||
-      (typeof x.initiativeBonus === "number" && !Number.isNaN(x.initiativeBonus)))
-  );
+  if (
+    !x ||
+    typeof x._id !== "string" ||
+    typeof x.name !== "string" ||
+    typeof x.type !== "string" ||
+    typeof x.alignment !== "string" ||
+    !Array.isArray(x.actions) ||
+    typeof x.hitPoints !== "number" ||
+    typeof x.armorClass !== "number"
+  ) {
+    return false;
+  }
+  if (
+    x.initiativeBonus !== undefined &&
+    (typeof x.initiativeBonus !== "number" || Number.isNaN(x.initiativeBonus))
+  ) {
+    return false;
+  }
+  if (!isLegacyActionsArray(x.actions) && !isStructuredActionsArray(x.actions)) {
+    return false;
+  }
+  return true;
+}
+
+function normalizeSnapshot(o: RawOpponentSnapshot): OpponentSnapshot {
+  return { ...o, actions: normalizeActionsForEncounter(o.actions) };
 }
 
 function validateBody(body: unknown): {
@@ -54,10 +77,12 @@ function validateBody(body: unknown): {
       return { error: "Opponents must be an array" };
     }
   }
+  const filtered = Array.isArray(opponents)
+    ? opponents.filter(validateOpponentSnapshot)
+    : [];
   return {
     name: typeof name === "string" ? name.trim() : undefined,
-    opponents:
-      Array.isArray(opponents) ? opponents.filter(validateOpponentSnapshot) : undefined,
+    opponents: filtered.map(normalizeSnapshot),
   };
 }
 

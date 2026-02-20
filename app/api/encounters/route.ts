@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Encounter from "@/lib/models/Encounter";
+import {
+  normalizeActionsForEncounter,
+  isLegacyActionsArray,
+  isStructuredActionsArray,
+} from "@/lib/actions";
+import type { OpponentAction } from "@/lib/types/actions";
 
 const ICAO_ALPHABET = [
   "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel",
@@ -14,7 +20,7 @@ type OpponentSnapshot = {
   name: string;
   type: string;
   alignment: string;
-  actions: string[];
+  actions: OpponentAction[];
   hitPoints: number;
   armorClass: number;
   initiativeBonus: number;
@@ -33,21 +39,45 @@ function applyDuplicateNicknames(opponents: OpponentSnapshot[]): OpponentSnapsho
   });
 }
 
-function validateOpponentSnapshot(o: unknown): o is OpponentSnapshot {
+type RawOpponentSnapshot = {
+  _id: string;
+  name: string;
+  type: string;
+  alignment: string;
+  actions: unknown[];
+  hitPoints: number;
+  armorClass: number;
+  initiativeBonus: number;
+};
+
+function validateOpponentSnapshot(o: unknown): o is RawOpponentSnapshot {
   const x = o as Record<string, unknown>;
-  return (
-    x &&
-    typeof x._id === "string" &&
-    typeof x.name === "string" &&
-    typeof x.type === "string" &&
-    typeof x.alignment === "string" &&
-    Array.isArray(x.actions) &&
-    (x.actions as unknown[]).every((a) => typeof a === "string") &&
-    typeof x.hitPoints === "number" &&
-    typeof x.armorClass === "number" &&
-    (x.initiativeBonus === undefined ||
-      (typeof x.initiativeBonus === "number" && !Number.isNaN(x.initiativeBonus)))
-  );
+  if (
+    !x ||
+    typeof x._id !== "string" ||
+    typeof x.name !== "string" ||
+    typeof x.type !== "string" ||
+    typeof x.alignment !== "string" ||
+    !Array.isArray(x.actions) ||
+    typeof x.hitPoints !== "number" ||
+    typeof x.armorClass !== "number"
+  ) {
+    return false;
+  }
+  if (
+    x.initiativeBonus !== undefined &&
+    (typeof x.initiativeBonus !== "number" || Number.isNaN(x.initiativeBonus))
+  ) {
+    return false;
+  }
+  if (!isLegacyActionsArray(x.actions) && !isStructuredActionsArray(x.actions)) {
+    return false;
+  }
+  return true;
+}
+
+function normalizeSnapshot(o: RawOpponentSnapshot): OpponentSnapshot {
+  return { ...o, actions: normalizeActionsForEncounter(o.actions) };
 }
 
 function validateBody(
@@ -90,7 +120,8 @@ export async function POST(request: Request) {
     if (validated.error) {
       return NextResponse.json({ error: validated.error }, { status: 400 });
     }
-    const opponentsWithNicknames = applyDuplicateNicknames(validated.opponents);
+    const normalized = validated.opponents.map(normalizeSnapshot);
+    const opponentsWithNicknames = applyDuplicateNicknames(normalized);
     const encounter = await Encounter.create({
       name: validated.name,
       opponents: opponentsWithNicknames,

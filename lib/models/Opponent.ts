@@ -1,11 +1,30 @@
 import mongoose from "mongoose";
 
+const actionSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      required: true,
+      enum: ["melee", "ranged", "spell", "special"],
+    },
+    attackBonus: Number,
+    criticalRange: String,
+    damage: String,
+    range: String,
+    spellId: { type: mongoose.Schema.Types.ObjectId, ref: "Spell" },
+    spellName: String,
+    savingThrow: String,
+    description: String,
+  },
+  { _id: false }
+);
+
 const opponentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     type: { type: String, required: true },
     alignment: { type: String, required: true },
-    actions: { type: [String], required: true, default: [] },
+    actions: { type: [actionSchema], required: true, default: [] },
     hitPoints: { type: Number, required: true },
     armorClass: { type: Number, required: true },
     initiativeBonus: { type: Number, default: 0 },

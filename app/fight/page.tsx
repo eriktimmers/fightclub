@@ -17,6 +17,8 @@ import DiceRoller from "@/components/DiceRoller";
 import AttackRoller from "@/components/AttackRoller";
 import { useAppDispatch } from "@/store/hooks";
 import { setSides, setCount, setPerDieBonus, setTotalBonus, setResults } from "@/store/diceSlice";
+import type { OpponentAction } from "@/lib/types/actions";
+import { formatActionLabel } from "@/lib/types/actions";
 
 type Character = {
   _id: string;
@@ -29,7 +31,7 @@ type Opponent = {
   name: string;
   type: string;
   alignment: string;
-  actions: string[];
+  actions: (OpponentAction | string)[];
   hitPoints: number;
   armorClass: number;
   initiativeBonus?: number;
@@ -806,7 +808,9 @@ export default function FightPage() {
                         <dd className="mt-1 text-zinc-800 dark:text-zinc-200">
                           <ul className="list-inside list-disc space-y-0.5">
                             {opp.actions.map((action, i) => (
-                              <li key={i}>{action}</li>
+                              <li key={i}>
+                                {formatActionLabel(action)}
+                              </li>
                             ))}
                           </ul>
                         </dd>

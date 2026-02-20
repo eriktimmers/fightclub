@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Opponent from "@/lib/models/Opponent";
+import { validateAndNormalizeActions } from "@/lib/actions";
 
 const DEFAULT_ABILITY = 11;
 const DEFAULT_SAVE = 0;
@@ -19,7 +20,7 @@ function validateOpponentBody(body: unknown): {
   name?: string;
   type?: string;
   alignment?: string;
-  actions?: string[];
+  actions?: unknown[];
   hitPoints?: number;
   armorClass?: number;
   initiativeBonus?: number;
@@ -47,13 +48,9 @@ function validateOpponentBody(body: unknown): {
   if (!alignment || typeof alignment !== "string" || alignment.trim() === "") {
     return { error: "Alignment is required" };
   }
-  const actions = o?.actions;
-  if (!Array.isArray(actions)) {
-    return { error: "Actions must be an array" };
-  }
-  const actionsStrings = actions.filter((a): a is string => typeof a === "string");
-  if (actionsStrings.length === 0) {
-    return { error: "At least one action is required" };
+  const actionsResult = validateAndNormalizeActions(o?.actions);
+  if (actionsResult.error) {
+    return { error: actionsResult.error };
   }
   const hitPoints = Number(o?.hitPoints);
   if (Number.isNaN(hitPoints) || hitPoints < 0) {
@@ -74,7 +71,7 @@ function validateOpponentBody(body: unknown): {
     name: name.trim(),
     type: type.trim(),
     alignment: alignment.trim(),
-    actions: actionsStrings,
+    actions: actionsResult.actions,
     hitPoints,
     armorClass,
     initiativeBonus,

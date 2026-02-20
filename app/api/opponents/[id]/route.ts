@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Opponent from "@/lib/models/Opponent";
+import { validateAndNormalizeActions } from "@/lib/actions";
 import mongoose from "mongoose";
 
 function isValidId(id: string): boolean {
@@ -58,7 +59,7 @@ export async function PATCH(
       name?: string;
       type?: string;
       alignment?: string;
-      actions?: string[];
+      actions?: unknown[];
       hitPoints?: number;
       armorClass?: number;
       initiativeBonus?: number;
@@ -101,22 +102,14 @@ export async function PATCH(
       update.alignment = body.alignment.trim();
     }
     if (body.actions !== undefined) {
-      if (!Array.isArray(body.actions)) {
+      const result = validateAndNormalizeActions(body.actions);
+      if (result.error) {
         return NextResponse.json(
-          { error: "Actions must be an array" },
+          { error: result.error },
           { status: 400 }
         );
       }
-      const actionsStrings = body.actions.filter(
-        (a: unknown): a is string => typeof a === "string"
-      );
-      if (actionsStrings.length === 0) {
-        return NextResponse.json(
-          { error: "At least one action is required" },
-          { status: 400 }
-        );
-      }
-      update.actions = actionsStrings;
+      update.actions = result.actions;
     }
     if (body.hitPoints !== undefined) {
       const hp = Number(body.hitPoints);

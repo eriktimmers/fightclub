@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import type { OpponentAction } from "@/lib/types/actions";
 
 type Opponent = {
   _id: string;
   name: string;
   type: string;
   alignment: string;
-  actions: string[];
+  actions: OpponentAction[] | string[];
   hitPoints: number;
   armorClass: number;
   initiativeBonus?: number;

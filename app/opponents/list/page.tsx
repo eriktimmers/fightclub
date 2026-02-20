@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import ActionsEditor, {
+  normalizeLegacyActions,
+} from "@/components/ActionsEditor";
+import type { OpponentAction } from "@/lib/types/actions";
 
 const DEFAULT_ABILITY = 11;
 const DEFAULT_SAVE = 0;
@@ -11,7 +15,7 @@ type Opponent = {
   name: string;
   type: string;
   alignment: string;
-  actions: string[];
+  actions: OpponentAction[] | string[];
   hitPoints: number;
   armorClass: number;
   initiativeBonus?: number;
@@ -44,55 +48,10 @@ const inputClass =
 const labelClass =
   "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
 
-function ActionsEditor({
-  actions,
-  onChange,
-  disabled,
-}: {
-  actions: string[];
-  onChange: (actions: string[]) => void;
-  disabled?: boolean;
-}) {
-  const add = () => onChange([...actions, ""]);
-  const remove = (i: number) =>
-    onChange(actions.filter((_, idx) => idx !== i));
-  const set = (i: number, v: string) =>
-    onChange(actions.map((a, idx) => (idx === i ? v : a)));
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className={labelClass}>Actions</label>
-        <button
-          type="button"
-          onClick={add}
-          disabled={disabled || actions.length >= 20}
-          className="text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 disabled:opacity-50"
-        >
-          + Add action
-        </button>
-      </div>
-      {actions.map((a, i) => (
-        <div key={i} className="flex gap-2">
-          <input
-            type="text"
-            value={a}
-            onChange={(e) => set(i, e.target.value)}
-            placeholder={`Action ${i + 1}`}
-            className={inputClass}
-            disabled={disabled}
-          />
-          <button
-            type="button"
-            onClick={() => remove(i)}
-            disabled={disabled || actions.length <= 1}
-            className="shrink-0 rounded-lg border border-zinc-300 px-2.5 py-2 text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-    </div>
+function validActions(actions: OpponentAction[]): boolean {
+  if (actions.length === 0) return false;
+  return actions.some(
+    (a) => a.type !== "special" || (a.description?.trim() ?? "").length > 0
   );
 }
 
@@ -104,7 +63,9 @@ export default function OpponentsListPage() {
   const [editName, setEditName] = useState("");
   const [editType, setEditType] = useState("");
   const [editAlignment, setEditAlignment] = useState("");
-  const [editActions, setEditActions] = useState<string[]>([""]);
+  const [editActions, setEditActions] = useState<OpponentAction[]>([
+    { type: "special", description: "" },
+  ]);
   const [editHitPoints, setEditHitPoints] = useState("");
   const [editArmorClass, setEditArmorClass] = useState("");
   const [editInitiativeBonus, setEditInitiativeBonus] = useState("0");
@@ -140,15 +101,14 @@ export default function OpponentsListPage() {
     fetchOpponents();
   }, []);
 
-  const validActions = (arr: string[]) =>
-    arr.filter((a) => a.trim() !== "").length > 0;
-
   const startEdit = (o: Opponent) => {
     setEditingId(o._id);
     setEditName(o.name);
     setEditType(o.type);
     setEditAlignment(o.alignment);
-    setEditActions(o.actions.length > 0 ? o.actions : [""]);
+    setEditActions(
+      o.actions.length > 0 ? normalizeLegacyActions(o.actions) : [{ type: "special", description: "" }]
+    );
     setEditHitPoints(String(o.hitPoints));
     setEditArmorClass(String(o.armorClass));
     setEditInitiativeBonus(String(o.initiativeBonus ?? 0));
@@ -169,7 +129,7 @@ export default function OpponentsListPage() {
     setEditName("");
     setEditType("");
     setEditAlignment("");
-    setEditActions([""]);
+    setEditActions([{ type: "special", description: "" }]);
     setEditHitPoints("");
     setEditArmorClass("");
     setEditInitiativeBonus("0");
@@ -189,7 +149,7 @@ export default function OpponentsListPage() {
     if (!editingId) return;
     setError(null);
     if (!validActions(editActions)) {
-      setError("At least one action is required");
+      setError("At least one action is required (special actions need a description)");
       return;
     }
     setActionLoading(editingId);
@@ -201,7 +161,7 @@ export default function OpponentsListPage() {
           name: editName.trim(),
           type: editType.trim(),
           alignment: editAlignment.trim(),
-          actions: editActions.map((a) => a.trim()).filter(Boolean),
+          actions: editActions,
           hitPoints: Number(editHitPoints),
           armorClass: Number(editArmorClass),
           initiativeBonus:
