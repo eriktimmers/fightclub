@@ -16,6 +16,13 @@ const inputClass =
 const labelClass =
   "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
 
+const CRITICAL_RANGE_OPTIONS = [
+  { value: "none", label: "None" },
+  { value: "20", label: "20" },
+  { value: "19-20", label: "19-20" },
+  { value: "18-20", label: "18-20" },
+] as const;
+
 type SpellOption = { _id: string; name: string };
 
 function defaultAction(type: ActionType): OpponentAction {
@@ -144,16 +151,23 @@ export default function ActionsEditor({
               </div>
               <div>
                 <label className={labelClass}>Critical range</label>
-                <input
-                  type="text"
-                  value={(a as MeleeAction).criticalRange ?? ""}
+                <select
+                  value={(a as MeleeAction).criticalRange ?? "none"}
                   onChange={(e) =>
-                    setAction(i, { ...a, criticalRange: e.target.value || undefined })
+                    setAction(i, {
+                      ...a,
+                      criticalRange: e.target.value === "none" ? undefined : e.target.value,
+                    })
                   }
-                  placeholder="e.g. 19-20"
                   className={inputClass}
                   disabled={disabled}
-                />
+                >
+                  {CRITICAL_RANGE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelClass}>Damage</label>
@@ -204,16 +218,23 @@ export default function ActionsEditor({
               </div>
               <div>
                 <label className={labelClass}>Critical range</label>
-                <input
-                  type="text"
-                  value={(a as RangedAction).criticalRange ?? ""}
+                <select
+                  value={(a as RangedAction).criticalRange ?? "none"}
                   onChange={(e) =>
-                    setAction(i, { ...a, criticalRange: e.target.value || undefined })
+                    setAction(i, {
+                      ...a,
+                      criticalRange: e.target.value === "none" ? undefined : e.target.value,
+                    })
                   }
-                  placeholder="e.g. 19-20"
                   className={inputClass}
                   disabled={disabled}
-                />
+                >
+                  {CRITICAL_RANGE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelClass}>Damage</label>

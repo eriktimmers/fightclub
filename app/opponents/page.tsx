@@ -42,7 +42,7 @@ export default function OpponentsPage() {
     { type: "special", description: "" },
   ]);
   const [hitPoints, setHitPoints] = useState("");
-  const [armorClass, setArmorClass] = useState("");
+  const [armorClass, setArmorClass] = useState("10");
   const [initiativeBonus, setInitiativeBonus] = useState("0");
   const [strength, setStrength] = useState(String(DEFAULT_ABILITY));
   const [dexterity, setDexterity] = useState(String(DEFAULT_ABILITY));
@@ -96,7 +96,7 @@ export default function OpponentsPage() {
       setAlignment("");
       setActions([{ type: "special", description: "" }]);
       setHitPoints("");
-      setArmorClass("");
+      setArmorClass("10");
       setInitiativeBonus("0");
       setStrength(String(DEFAULT_ABILITY));
       setDexterity(String(DEFAULT_ABILITY));
