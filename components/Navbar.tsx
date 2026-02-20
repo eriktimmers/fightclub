@@ -39,6 +39,12 @@ export default function Navbar() {
             >
               Opponents
             </Link>
+            <Link 
+              href="/encounters" 
+              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Encounters
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-4">
