@@ -29,6 +29,15 @@ type Opponent = {
   hitPoints: number;
   armorClass: number;
   initiativeBonus?: number;
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
+  savingThrowDex?: number;
+  savingThrowCon?: number;
+  savingThrowWis?: number;
 };
 
 type Encounter = {
@@ -59,11 +68,50 @@ export default function FightPage() {
   const [loadingCharacters, setLoadingCharacters] = useState(true);
   const [diceModalOpen, setDiceModalOpen] = useState(false);
   const [opponentDetailId, setOpponentDetailId] = useState<string | null>(null);
+  const [fullOpponent, setFullOpponent] = useState<Opponent | null>(null);
+  const [fullOpponentLoading, setFullOpponentLoading] = useState(false);
+  const [fullOpponentError, setFullOpponentError] = useState<string | null>(null);
 
   const selectedEncounter = selectedEncounterId
     ? encounters.find((e) => e._id === selectedEncounterId) ?? null
     : null;
   const opponents = selectedEncounter?.opponents ?? [];
+
+  useEffect(() => {
+    if (!opponentDetailId || phase !== "Combat") {
+      setFullOpponent(null);
+      setFullOpponentError(null);
+      return;
+    }
+    const match = opponentDetailId.match(/^opp-[^-]+-(\d+)$/);
+    const opp = match ? opponents[parseInt(match[1], 10)] : null;
+    const oppId = opp && "_id" in opp ? (opp as Opponent)._id : null;
+    if (!oppId) {
+      setFullOpponent(null);
+      setFullOpponentError("Opponent not found");
+      return;
+    }
+    setFullOpponentLoading(true);
+    setFullOpponentError(null);
+    fetch(`/api/opponents/${oppId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load opponent");
+        return res.json();
+      })
+      .then((data) => {
+        setFullOpponent(data as Opponent);
+      })
+      .catch(() => setFullOpponentError("Failed to load opponent"))
+      .finally(() => setFullOpponentLoading(false));
+  }, [opponentDetailId, phase, opponents]);
+
+  useEffect(() => {
+    if (!opponentDetailId) {
+      setFullOpponent(null);
+      setFullOpponentLoading(false);
+      setFullOpponentError(null);
+    }
+  }, [opponentDetailId]);
 
   useEffect(() => {
     setCombatants([]);
@@ -665,8 +713,9 @@ export default function FightPage() {
 
         {/* Opponent detail modal (Combat phase, left-panel opponents) */}
         {opponentDetailId && phase === "Combat" ? (() => {
-          const opp = opponentParticipants.find((p) => p.id === opponentDetailId)?.opponent;
-          if (!opp) return null;
+          const fallback = opponentParticipants.find((p) => p.id === opponentDetailId)?.opponent;
+          const opp = fullOpponent ?? fallback;
+          if (!fallback) return null;
           return (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -674,44 +723,62 @@ export default function FightPage() {
               aria-modal="true"
               aria-labelledby="opponent-detail-title"
             >
-              <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                 <h2 id="opponent-detail-title" className="mb-3 text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-                  {opp.name}
+                  {opp?.name ?? fallback.name}
                 </h2>
-                <dl className="space-y-2 text-sm">
-                  <div>
-                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Type</dt>
-                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.type}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Alignment</dt>
-                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.alignment}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Hit points</dt>
-                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.hitPoints}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Armor class</dt>
-                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.armorClass}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Initiative bonus</dt>
-                    <dd className="text-zinc-800 dark:text-zinc-200">{opp.initiativeBonus ?? 0}</dd>
-                  </div>
-                  {opp.actions?.length > 0 ? (
+                {fullOpponentLoading ? (
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading opponent…</p>
+                ) : fullOpponentError ? (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">{fullOpponentError}</p>
+                ) : opp ? (
+                  <dl className="space-y-2 text-sm">
                     <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Actions</dt>
-                      <dd className="mt-1 text-zinc-800 dark:text-zinc-200">
-                        <ul className="list-inside list-disc space-y-0.5">
-                          {opp.actions.map((action, i) => (
-                            <li key={i}>{action}</li>
-                          ))}
-                        </ul>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Type</dt>
+                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.type}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Alignment</dt>
+                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.alignment}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Hit points</dt>
+                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.hitPoints}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Armor class</dt>
+                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.armorClass}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Initiative bonus</dt>
+                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.initiativeBonus ?? 0}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Ability scores</dt>
+                      <dd className="text-zinc-800 dark:text-zinc-200">
+                        STR {opp.strength ?? 11}, DEX {opp.dexterity ?? 11}, CON {opp.constitution ?? 11}, INT {opp.intelligence ?? 11}, WIS {opp.wisdom ?? 11}, CHA {opp.charisma ?? 11}
                       </dd>
                     </div>
-                  ) : null}
-                </dl>
+                    <div>
+                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Saving throws</dt>
+                      <dd className="text-zinc-800 dark:text-zinc-200">
+                        Reflex {opp.savingThrowDex ?? 0}, Fortitude {opp.savingThrowCon ?? 0}, Will {opp.savingThrowWis ?? 0}
+                      </dd>
+                    </div>
+                    {opp.actions?.length > 0 ? (
+                      <div>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Actions</dt>
+                        <dd className="mt-1 text-zinc-800 dark:text-zinc-200">
+                          <ul className="list-inside list-disc space-y-0.5">
+                            {opp.actions.map((action, i) => (
+                              <li key={i}>{action}</li>
+                            ))}
+                          </ul>
+                        </dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                ) : null}
                 <div className="mt-4 flex justify-end">
                   <button
                     type="button"

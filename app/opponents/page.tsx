@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 
+const DEFAULT_ABILITY = 11;
+const DEFAULT_SAVE = 0;
+
 type Opponent = {
   _id: string;
   name: string;
@@ -11,6 +14,15 @@ type Opponent = {
   hitPoints: number;
   armorClass: number;
   initiativeBonus?: number;
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
+  savingThrowDex?: number;
+  savingThrowCon?: number;
+  savingThrowWis?: number;
   createdAt: string;
 };
 
@@ -91,6 +103,15 @@ export default function OpponentsPage() {
   const [hitPoints, setHitPoints] = useState("");
   const [armorClass, setArmorClass] = useState("");
   const [initiativeBonus, setInitiativeBonus] = useState("0");
+  const [strength, setStrength] = useState(String(DEFAULT_ABILITY));
+  const [dexterity, setDexterity] = useState(String(DEFAULT_ABILITY));
+  const [constitution, setConstitution] = useState(String(DEFAULT_ABILITY));
+  const [intelligence, setIntelligence] = useState(String(DEFAULT_ABILITY));
+  const [wisdom, setWisdom] = useState(String(DEFAULT_ABILITY));
+  const [charisma, setCharisma] = useState(String(DEFAULT_ABILITY));
+  const [savingThrowDex, setSavingThrowDex] = useState(String(DEFAULT_SAVE));
+  const [savingThrowCon, setSavingThrowCon] = useState(String(DEFAULT_SAVE));
+  const [savingThrowWis, setSavingThrowWis] = useState(String(DEFAULT_SAVE));
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(true);
@@ -103,6 +124,15 @@ export default function OpponentsPage() {
   const [editHitPoints, setEditHitPoints] = useState("");
   const [editArmorClass, setEditArmorClass] = useState("");
   const [editInitiativeBonus, setEditInitiativeBonus] = useState("0");
+  const [editStrength, setEditStrength] = useState(String(DEFAULT_ABILITY));
+  const [editDexterity, setEditDexterity] = useState(String(DEFAULT_ABILITY));
+  const [editConstitution, setEditConstitution] = useState(String(DEFAULT_ABILITY));
+  const [editIntelligence, setEditIntelligence] = useState(String(DEFAULT_ABILITY));
+  const [editWisdom, setEditWisdom] = useState(String(DEFAULT_ABILITY));
+  const [editCharisma, setEditCharisma] = useState(String(DEFAULT_ABILITY));
+  const [editSavingThrowDex, setEditSavingThrowDex] = useState(String(DEFAULT_SAVE));
+  const [editSavingThrowCon, setEditSavingThrowCon] = useState(String(DEFAULT_SAVE));
+  const [editSavingThrowWis, setEditSavingThrowWis] = useState(String(DEFAULT_SAVE));
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchOpponents = async () => {
@@ -149,6 +179,15 @@ export default function OpponentsPage() {
           hitPoints: Number(hitPoints),
           armorClass: Number(armorClass),
           initiativeBonus: initiativeBonus === "" ? 0 : Number(initiativeBonus),
+          strength: strength === "" ? DEFAULT_ABILITY : Number(strength),
+          dexterity: dexterity === "" ? DEFAULT_ABILITY : Number(dexterity),
+          constitution: constitution === "" ? DEFAULT_ABILITY : Number(constitution),
+          intelligence: intelligence === "" ? DEFAULT_ABILITY : Number(intelligence),
+          wisdom: wisdom === "" ? DEFAULT_ABILITY : Number(wisdom),
+          charisma: charisma === "" ? DEFAULT_ABILITY : Number(charisma),
+          savingThrowDex: savingThrowDex === "" ? DEFAULT_SAVE : Number(savingThrowDex),
+          savingThrowCon: savingThrowCon === "" ? DEFAULT_SAVE : Number(savingThrowCon),
+          savingThrowWis: savingThrowWis === "" ? DEFAULT_SAVE : Number(savingThrowWis),
         }),
       });
       const data = await res.json();
@@ -162,6 +201,15 @@ export default function OpponentsPage() {
       setHitPoints("");
       setArmorClass("");
       setInitiativeBonus("0");
+      setStrength(String(DEFAULT_ABILITY));
+      setDexterity(String(DEFAULT_ABILITY));
+      setConstitution(String(DEFAULT_ABILITY));
+      setIntelligence(String(DEFAULT_ABILITY));
+      setWisdom(String(DEFAULT_ABILITY));
+      setCharisma(String(DEFAULT_ABILITY));
+      setSavingThrowDex(String(DEFAULT_SAVE));
+      setSavingThrowCon(String(DEFAULT_SAVE));
+      setSavingThrowWis(String(DEFAULT_SAVE));
       await fetchOpponents();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -181,6 +229,15 @@ export default function OpponentsPage() {
     setEditHitPoints(String(o.hitPoints));
     setEditArmorClass(String(o.armorClass));
     setEditInitiativeBonus(String(o.initiativeBonus ?? 0));
+    setEditStrength(String(o.strength ?? DEFAULT_ABILITY));
+    setEditDexterity(String(o.dexterity ?? DEFAULT_ABILITY));
+    setEditConstitution(String(o.constitution ?? DEFAULT_ABILITY));
+    setEditIntelligence(String(o.intelligence ?? DEFAULT_ABILITY));
+    setEditWisdom(String(o.wisdom ?? DEFAULT_ABILITY));
+    setEditCharisma(String(o.charisma ?? DEFAULT_ABILITY));
+    setEditSavingThrowDex(String(o.savingThrowDex ?? DEFAULT_SAVE));
+    setEditSavingThrowCon(String(o.savingThrowCon ?? DEFAULT_SAVE));
+    setEditSavingThrowWis(String(o.savingThrowWis ?? DEFAULT_SAVE));
     setError(null);
   };
 
@@ -193,6 +250,15 @@ export default function OpponentsPage() {
     setEditHitPoints("");
     setEditArmorClass("");
     setEditInitiativeBonus("0");
+    setEditStrength(String(DEFAULT_ABILITY));
+    setEditDexterity(String(DEFAULT_ABILITY));
+    setEditConstitution(String(DEFAULT_ABILITY));
+    setEditIntelligence(String(DEFAULT_ABILITY));
+    setEditWisdom(String(DEFAULT_ABILITY));
+    setEditCharisma(String(DEFAULT_ABILITY));
+    setEditSavingThrowDex(String(DEFAULT_SAVE));
+    setEditSavingThrowCon(String(DEFAULT_SAVE));
+    setEditSavingThrowWis(String(DEFAULT_SAVE));
     setError(null);
   };
 
@@ -217,6 +283,15 @@ export default function OpponentsPage() {
           armorClass: Number(editArmorClass),
           initiativeBonus:
             editInitiativeBonus === "" ? 0 : Number(editInitiativeBonus),
+          strength: editStrength === "" ? DEFAULT_ABILITY : Number(editStrength),
+          dexterity: editDexterity === "" ? DEFAULT_ABILITY : Number(editDexterity),
+          constitution: editConstitution === "" ? DEFAULT_ABILITY : Number(editConstitution),
+          intelligence: editIntelligence === "" ? DEFAULT_ABILITY : Number(editIntelligence),
+          wisdom: editWisdom === "" ? DEFAULT_ABILITY : Number(editWisdom),
+          charisma: editCharisma === "" ? DEFAULT_ABILITY : Number(editCharisma),
+          savingThrowDex: editSavingThrowDex === "" ? DEFAULT_SAVE : Number(editSavingThrowDex),
+          savingThrowCon: editSavingThrowCon === "" ? DEFAULT_SAVE : Number(editSavingThrowCon),
+          savingThrowWis: editSavingThrowWis === "" ? DEFAULT_SAVE : Number(editSavingThrowWis),
         }),
       });
       const data = await res.json();
@@ -360,6 +435,53 @@ export default function OpponentsPage() {
                 />
               </div>
             </div>
+            <div>
+              <span className={labelClass}>Ability scores</span>
+              <div className="mt-1 grid grid-cols-6 gap-2">
+                <div>
+                  <label htmlFor="strength" className="sr-only">STR</label>
+                  <input id="strength" type="number" min={1} max={30} value={strength} onChange={(e) => setStrength(e.target.value)} placeholder="11" className={inputClass} title="Strength" />
+                </div>
+                <div>
+                  <label htmlFor="dexterity" className="sr-only">DEX</label>
+                  <input id="dexterity" type="number" min={1} max={30} value={dexterity} onChange={(e) => setDexterity(e.target.value)} placeholder="11" className={inputClass} title="Dexterity" />
+                </div>
+                <div>
+                  <label htmlFor="constitution" className="sr-only">CON</label>
+                  <input id="constitution" type="number" min={1} max={30} value={constitution} onChange={(e) => setConstitution(e.target.value)} placeholder="11" className={inputClass} title="Constitution" />
+                </div>
+                <div>
+                  <label htmlFor="intelligence" className="sr-only">INT</label>
+                  <input id="intelligence" type="number" min={1} max={30} value={intelligence} onChange={(e) => setIntelligence(e.target.value)} placeholder="11" className={inputClass} title="Intelligence" />
+                </div>
+                <div>
+                  <label htmlFor="wisdom" className="sr-only">WIS</label>
+                  <input id="wisdom" type="number" min={1} max={30} value={wisdom} onChange={(e) => setWisdom(e.target.value)} placeholder="11" className={inputClass} title="Wisdom" />
+                </div>
+                <div>
+                  <label htmlFor="charisma" className="sr-only">CHA</label>
+                  <input id="charisma" type="number" min={1} max={30} value={charisma} onChange={(e) => setCharisma(e.target.value)} placeholder="11" className={inputClass} title="Charisma" />
+                </div>
+              </div>
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">STR, DEX, CON, INT, WIS, CHA (default 11)</p>
+            </div>
+            <div>
+              <span className={labelClass}>Saving throws (bonus)</span>
+              <div className="mt-1 grid grid-cols-3 gap-2">
+                <div>
+                  <label htmlFor="savingThrowDex" className={labelClass}>Reflex save</label>
+                  <input id="savingThrowDex" type="number" value={savingThrowDex} onChange={(e) => setSavingThrowDex(e.target.value)} placeholder="0" className={inputClass} />
+                </div>
+                <div>
+                  <label htmlFor="savingThrowCon" className={labelClass}>Fortitude save</label>
+                  <input id="savingThrowCon" type="number" value={savingThrowCon} onChange={(e) => setSavingThrowCon(e.target.value)} placeholder="0" className={inputClass} />
+                </div>
+                <div>
+                  <label htmlFor="savingThrowWis" className={labelClass}>Will save</label>
+                  <input id="savingThrowWis" type="number" value={savingThrowWis} onChange={(e) => setSavingThrowWis(e.target.value)} placeholder="0" className={inputClass} />
+                </div>
+              </div>
+            </div>
           </div>
           {error && (
             <p className="mt-4 text-sm text-red-600 dark:text-red-400">
@@ -454,6 +576,28 @@ export default function OpponentsPage() {
                           placeholder="Init"
                           className={inputClass}
                         />
+                      </div>
+                      <div className="grid grid-cols-6 gap-2">
+                        <input type="number" min={1} max={30} value={editStrength} onChange={(e) => setEditStrength(e.target.value)} placeholder="STR" className={inputClass} title="Strength" />
+                        <input type="number" min={1} max={30} value={editDexterity} onChange={(e) => setEditDexterity(e.target.value)} placeholder="DEX" className={inputClass} title="Dexterity" />
+                        <input type="number" min={1} max={30} value={editConstitution} onChange={(e) => setEditConstitution(e.target.value)} placeholder="CON" className={inputClass} title="Constitution" />
+                        <input type="number" min={1} max={30} value={editIntelligence} onChange={(e) => setEditIntelligence(e.target.value)} placeholder="INT" className={inputClass} title="Intelligence" />
+                        <input type="number" min={1} max={30} value={editWisdom} onChange={(e) => setEditWisdom(e.target.value)} placeholder="WIS" className={inputClass} title="Wisdom" />
+                        <input type="number" min={1} max={30} value={editCharisma} onChange={(e) => setEditCharisma(e.target.value)} placeholder="CHA" className={inputClass} title="Charisma" />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">Reflex save</label>
+                          <input type="number" value={editSavingThrowDex} onChange={(e) => setEditSavingThrowDex(e.target.value)} className={inputClass} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">Fortitude save</label>
+                          <input type="number" value={editSavingThrowCon} onChange={(e) => setEditSavingThrowCon(e.target.value)} className={inputClass} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">Will save</label>
+                          <input type="number" value={editSavingThrowWis} onChange={(e) => setEditSavingThrowWis(e.target.value)} className={inputClass} />
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button

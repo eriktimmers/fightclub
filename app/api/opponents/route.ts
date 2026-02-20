@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Opponent from "@/lib/models/Opponent";
 
+const DEFAULT_ABILITY = 11;
+const DEFAULT_SAVE = 0;
+
+function parseAbility(value: unknown): number {
+  const n = Number(value);
+  return Number.isNaN(n) ? DEFAULT_ABILITY : n;
+}
+
+function parseSave(value: unknown): number {
+  const n = Number(value);
+  return Number.isNaN(n) ? DEFAULT_SAVE : n;
+}
+
 function validateOpponentBody(body: unknown): {
   name?: string;
   type?: string;
@@ -10,6 +23,15 @@ function validateOpponentBody(body: unknown): {
   hitPoints?: number;
   armorClass?: number;
   initiativeBonus?: number;
+  strength?: number;
+  dexterity?: number;
+  constitution?: number;
+  intelligence?: number;
+  wisdom?: number;
+  charisma?: number;
+  savingThrowDex?: number;
+  savingThrowCon?: number;
+  savingThrowWis?: number;
   error?: string;
 } {
   const o = body as Record<string, unknown>;
@@ -56,6 +78,15 @@ function validateOpponentBody(body: unknown): {
     hitPoints,
     armorClass,
     initiativeBonus,
+    strength: parseAbility(o?.strength),
+    dexterity: parseAbility(o?.dexterity),
+    constitution: parseAbility(o?.constitution),
+    intelligence: parseAbility(o?.intelligence),
+    wisdom: parseAbility(o?.wisdom),
+    charisma: parseAbility(o?.charisma),
+    savingThrowDex: parseSave(o?.savingThrowDex),
+    savingThrowCon: parseSave(o?.savingThrowCon),
+    savingThrowWis: parseSave(o?.savingThrowWis),
   };
 }
 
@@ -89,6 +120,15 @@ export async function POST(request: Request) {
       hitPoints: validated.hitPoints,
       armorClass: validated.armorClass,
       initiativeBonus: validated.initiativeBonus,
+      strength: validated.strength,
+      dexterity: validated.dexterity,
+      constitution: validated.constitution,
+      intelligence: validated.intelligence,
+      wisdom: validated.wisdom,
+      charisma: validated.charisma,
+      savingThrowDex: validated.savingThrowDex,
+      savingThrowCon: validated.savingThrowCon,
+      savingThrowWis: validated.savingThrowWis,
     });
     return NextResponse.json(opponent);
   } catch (error) {
