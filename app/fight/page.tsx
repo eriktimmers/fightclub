@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDiceFive, faEye, faLink, faSkull } from "@fortawesome/free-solid-svg-icons";
+import {
+  faDiceFive,
+  faEye,
+  faFlaskVial,
+  faLink,
+  faPaperPlane,
+  faSkull,
+  faMoon,
+  faUserSecret,
+} from "@fortawesome/free-solid-svg-icons";
 import DiceRoller from "@/components/DiceRoller";
 
 type Character = {
@@ -44,6 +53,8 @@ export default function FightPage() {
   const [links, setLinks] = useState<Record<string, string>>({});
   const [statusInfo, setStatusInfo] = useState<Record<string, string>>({});
   const [statusPopupId, setStatusPopupId] = useState<string | null>(null);
+  type SpecialStatusKey = "snooze" | "poison" | "paperPlane" | "invisible";
+  const [specialStatuses, setSpecialStatuses] = useState<Record<string, Partial<Record<SpecialStatusKey, boolean>>>>({});
   const [loadingEncounters, setLoadingEncounters] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(true);
   const [diceModalOpen, setDiceModalOpen] = useState(false);
@@ -61,6 +72,7 @@ export default function FightPage() {
     setLinks({});
     setStatusInfo({});
     setStatusPopupId(null);
+    setSpecialStatuses({});
   }, [selectedEncounterId]);
 
   const fetchEncounters = useCallback(() => {
@@ -301,9 +313,25 @@ export default function FightPage() {
                             className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"} ${phase === "Combat" ? "cursor-pointer hover:underline" : ""}`}
                           >
                             {name}
-                            {phase === "Combat" && statusInfo[id]?.trim() ? (
-                              <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
-                            ) : null}
+                            {phase === "Combat" && (
+                              <>
+                                {statusInfo[id]?.trim() ? (
+                                  <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
+                                ) : null}
+                                {specialStatuses[id]?.snooze ? (
+                                  <FontAwesomeIcon icon={faMoon} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Sleeping" />
+                                ) : null}
+                                {specialStatuses[id]?.poison ? (
+                                  <FontAwesomeIcon icon={faFlaskVial} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Poison" />
+                                ) : null}
+                                {specialStatuses[id]?.paperPlane ? (
+                                  <FontAwesomeIcon icon={faPaperPlane} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Flying" />
+                                ) : null}
+                                {specialStatuses[id]?.invisible ? (
+                                  <FontAwesomeIcon icon={faUserSecret} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Invisible" />
+                                ) : null}
+                              </>
+                            )}
                           </span>
                         </div>
                         {phase === "Initiative" ? (
@@ -438,9 +466,25 @@ export default function FightPage() {
                         className={`min-w-0 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200 ${phase === "Combat" ? "cursor-pointer hover:underline" : ""}`}
                       >
                         {name}
-                        {phase === "Combat" && statusInfo[id]?.trim() ? (
-                          <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
-                        ) : null}
+                        {phase === "Combat" && (
+                          <>
+                            {statusInfo[id]?.trim() ? (
+                              <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
+                            ) : null}
+                            {specialStatuses[id]?.snooze ? (
+                              <FontAwesomeIcon icon={faMoon} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Sleeping" />
+                            ) : null}
+                            {specialStatuses[id]?.poison ? (
+                              <FontAwesomeIcon icon={faFlaskVial} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Poison" />
+                            ) : null}
+                            {specialStatuses[id]?.paperPlane ? (
+                              <FontAwesomeIcon icon={faPaperPlane} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Flying" />
+                            ) : null}
+                            {specialStatuses[id]?.invisible ? (
+                              <FontAwesomeIcon icon={faUserSecret} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Invisible" />
+                            ) : null}
+                          </>
+                        )}
                       </span>
                       <span className="shrink-0 text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
                         {initiative}
@@ -537,9 +581,25 @@ export default function FightPage() {
                         className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"} ${phase === "Combat" ? "cursor-pointer hover:underline" : ""}`}
                       >
                         {name}
-                        {phase === "Combat" && statusInfo[id]?.trim() ? (
-                          <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
-                        ) : null}
+                        {phase === "Combat" && (
+                          <>
+                            {statusInfo[id]?.trim() ? (
+                              <FontAwesomeIcon icon={faEye} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Has status" />
+                            ) : null}
+                            {specialStatuses[id]?.snooze ? (
+                              <FontAwesomeIcon icon={faMoon} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Sleeping" />
+                            ) : null}
+                            {specialStatuses[id]?.poison ? (
+                              <FontAwesomeIcon icon={faFlaskVial} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Poison" />
+                            ) : null}
+                            {specialStatuses[id]?.paperPlane ? (
+                              <FontAwesomeIcon icon={faPaperPlane} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Flying" />
+                            ) : null}
+                            {specialStatuses[id]?.invisible ? (
+                              <FontAwesomeIcon icon={faUserSecret} className="ml-1.5 text-xs text-zinc-500 dark:text-zinc-400" title="Invisible" />
+                            ) : null}
+                          </>
+                        )}
                       </span>
                     </div>
                     {phase === "Combat" ? (
@@ -678,6 +738,37 @@ export default function FightPage() {
               <h2 id="status-popup-title" className="mb-2 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                 Status — {combatants.find((c) => c.id === statusPopupId)?.name ?? opponentParticipants.find((p) => p.id === statusPopupId)?.name ?? characterParticipants.find((p) => p.id === statusPopupId)?.name ?? "Combatant"}
               </h2>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {[
+                  { key: "snooze" as const, icon: faMoon, label: "Sleeping" },
+                  { key: "poison" as const, icon: faFlaskVial, label: "Poisoned" },
+                  { key: "paperPlane" as const, icon: faPaperPlane, label: "Flying" },
+                  { key: "invisible" as const, icon: faUserSecret, label: "Invisible" },
+                ].map(({ key, icon, label }) => {
+                  const active = !!specialStatuses[statusPopupId]?.[key];
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        setSpecialStatuses((prev) => ({
+                          ...prev,
+                          [statusPopupId]: { ...prev[statusPopupId], [key]: !active },
+                        }))
+                      }
+                      title={active ? `Remove ${label}` : `Set ${label}`}
+                      className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        active
+                          ? "border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-500 dark:bg-amber-900/30 dark:text-amber-300"
+                          : "border-zinc-300 bg-white text-zinc-500 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                      }`}
+                    >
+                      <FontAwesomeIcon icon={icon} className="mr-1.5" />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
               <textarea
                 value={statusInfo[statusPopupId] ?? ""}
                 onChange={(e) => setStatusInfo((prev) => ({ ...prev, [statusPopupId]: e.target.value }))}
