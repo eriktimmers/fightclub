@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSkull } from "@fortawesome/free-solid-svg-icons";
+import { faLink, faSkull } from "@fortawesome/free-solid-svg-icons";
 
 type Character = {
   _id: string;
@@ -40,6 +40,7 @@ export default function FightPage() {
   const [combatants, setCombatants] = useState<{ id: string; name: string; initiative: number }[]>([]);
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [incapacitatedIds, setIncapacitatedIds] = useState<Set<string>>(new Set());
+  const [links, setLinks] = useState<Record<string, string>>({});
   const [loadingEncounters, setLoadingEncounters] = useState(true);
   const [loadingCharacters, setLoadingCharacters] = useState(true);
 
@@ -52,6 +53,7 @@ export default function FightPage() {
     setCombatants([]);
     setCurrentTurnIndex(0);
     setIncapacitatedIds(new Set());
+    setLinks({});
   }, [selectedEncounterId]);
 
   const fetchEncounters = useCallback(() => {
@@ -105,6 +107,14 @@ export default function FightPage() {
 
   const removeFromCombatants = (id: string) => {
     setIncapacitatedIds((prev) => new Set(prev).add(id));
+    setLinks((prev) => {
+      const other = prev[id];
+      if (!other) return prev;
+      const next = { ...prev };
+      delete next[id];
+      delete next[other];
+      return next;
+    });
     const removedIndex = combatants.findIndex((c) => c.id === id);
     const next = combatants.filter((c) => c.id !== id);
     setCombatants(next);
@@ -146,6 +156,44 @@ export default function FightPage() {
           maxInitiative != null ? combatants.filter((c) => c.initiative === maxInitiative).map((c) => c.id) : []
         );
   const combatantIds = new Set(combatants.map((c) => c.id));
+  const activeCombatantId =
+    combatants.length > 0
+      ? (phase === "Combat"
+          ? combatants[effectiveTurnIndex]?.id
+          : combatants.find((c) => highlightedCombatantIds.has(c.id))?.id) ?? null
+      : null;
+
+  const toggleLink = (targetId: string) => {
+    if (!activeCombatantId || activeCombatantId === targetId) return;
+    setLinks((prev) => {
+      const next = { ...prev };
+      const currentLinked = next[activeCombatantId!];
+      const targetLinked = next[targetId];
+      if (currentLinked === targetId) {
+        delete next[activeCombatantId!];
+        delete next[targetId];
+      } else {
+        if (currentLinked) {
+          delete next[currentLinked];
+          delete next[activeCombatantId!];
+        }
+        if (targetLinked) {
+          delete next[targetLinked];
+          delete next[targetId];
+        }
+        next[activeCombatantId!] = targetId;
+        next[targetId] = activeCombatantId!;
+      }
+      return next;
+    });
+  };
+
+  const activeLinkedId = activeCombatantId ? links[activeCombatantId] : null;
+  const activeLinkedName =
+    activeLinkedId &&
+    (combatants.find((c) => c.id === activeLinkedId)?.name ??
+      opponentParticipants.find((p) => p.id === activeLinkedId)?.name ??
+      characterParticipants.find((p) => p.id === activeLinkedId)?.name);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -195,6 +243,8 @@ export default function FightPage() {
                       const notInCombat = phase === "Combat" && !combatantIds.has(id);
                       const isIncapacitated = phase === "Combat" && incapacitatedIds.has(id);
                       const isGreyed = notInCombat || isIncapacitated;
+                      const isLinkedToActive = activeCombatantId !== null && links[activeCombatantId] === id;
+                      const canLink = !!activeCombatantId && activeCombatantId !== id;
                       return (
                       <li
                         key={id}
@@ -206,9 +256,26 @@ export default function FightPage() {
                               : "bg-zinc-50 dark:bg-zinc-800/50"
                         }`}
                       >
-                        <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
-                          {name}
-                        </span>
+                        <div className="flex min-w-0 shrink items-center gap-2">
+                          {phase !== "Combat" ? (
+                            <button
+                              type="button"
+                              onClick={() => canLink && toggleLink(id)}
+                              disabled={!canLink}
+                              title={canLink ? (isLinkedToActive ? "Unlink from active" : "Link to active") : "Select active combatant first"}
+                              className={`shrink-0 rounded p-1 transition-colors ${canLink ? "hover:bg-zinc-200 dark:hover:bg-zinc-700" : "cursor-default opacity-50"}`}
+                              aria-label={isLinkedToActive ? `${name} linked to active` : `Link ${name} to active combatant`}
+                            >
+                              <FontAwesomeIcon
+                                icon={faLink}
+                                className={`text-xs ${isLinkedToActive ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400"}`}
+                              />
+                            </button>
+                          ) : null}
+                          <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                            {name}
+                          </span>
+                        </div>
                         {phase === "Initiative" ? (
                           <button
                             type="button"
@@ -230,6 +297,19 @@ export default function FightPage() {
                                 placeholder="—"
                               />
                             </label>
+                            <button
+                              type="button"
+                              onClick={() => canLink && toggleLink(id)}
+                              disabled={!canLink}
+                              title={canLink ? (isLinkedToActive ? "Unlink from active" : "Link to active") : "Select active combatant first"}
+                              className={`shrink-0 rounded p-1 transition-colors ${canLink ? "hover:bg-zinc-200 dark:hover:bg-zinc-700" : "cursor-default opacity-50"}`}
+                              aria-label={isLinkedToActive ? `${name} linked to active` : `Link ${name} to active combatant`}
+                            >
+                              <FontAwesomeIcon
+                                icon={faLink}
+                                className={`text-xs ${isLinkedToActive ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400"}`}
+                              />
+                            </button>
                             <button
                               type="button"
                               onClick={() => !incapacitatedIds.has(id) && removeFromCombatants(id)}
@@ -289,7 +369,8 @@ export default function FightPage() {
             )}
           </section>
 
-          {/* Middle: Combatants in initiative order */}
+          {/* Middle: Combatants in initiative order + link status */}
+          <div className="flex flex-col gap-4">
           <section className="flex min-h-[320px] flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -342,6 +423,28 @@ export default function FightPage() {
             )}
           </section>
 
+          {/* Link status: under initiative order */}
+          {activeCombatantId && combatants.length > 0 ? (
+            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Link status
+              </h2>
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800/50">
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                  Active: {combatants.find((c) => c.id === activeCombatantId)?.name ?? "—"}
+                </span>
+                {activeLinkedName ? (
+                  <span className="ml-2 text-zinc-600 dark:text-zinc-400">
+                    · Linked to: {activeLinkedName}
+                  </span>
+                ) : (
+                  <span className="ml-2 text-zinc-500 dark:text-zinc-500">· Not linked</span>
+                )}
+              </div>
+            </section>
+          ) : null}
+          </div>
+
           {/* Right: Characters with initiative (always visible) */}
           <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -358,6 +461,8 @@ export default function FightPage() {
                   const notInCombat = phase === "Combat" && !combatantIds.has(id);
                   const isIncapacitated = phase === "Combat" && incapacitatedIds.has(id);
                   const isGreyed = notInCombat || isIncapacitated;
+                  const isLinkedToActive = activeCombatantId !== null && links[activeCombatantId] === id;
+                  const canLink = !!activeCombatantId && activeCombatantId !== id;
                   return (
                   <li
                     key={id}
@@ -369,14 +474,44 @@ export default function FightPage() {
                           : "bg-zinc-50 dark:bg-zinc-800/50"
                     }`}
                   >
-                    <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
-                      {name}
-                    </span>
+                    <div className="flex min-w-0 shrink items-center gap-2">
+                      {phase !== "Combat" ? (
+                        <button
+                          type="button"
+                          onClick={() => canLink && toggleLink(id)}
+                          disabled={!canLink}
+                          title={canLink ? (isLinkedToActive ? "Unlink from active" : "Link to active") : "Select active combatant first"}
+                          className={`shrink-0 rounded p-1 transition-colors ${canLink ? "hover:bg-zinc-200 dark:hover:bg-zinc-700" : "cursor-default opacity-50"}`}
+                          aria-label={isLinkedToActive ? `${name} linked to active` : `Link ${name} to active combatant`}
+                        >
+                          <FontAwesomeIcon
+                            icon={faLink}
+                            className={`text-xs ${isLinkedToActive ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400"}`}
+                          />
+                        </button>
+                      ) : null}
+                      <span className={`min-w-0 truncate text-sm font-medium ${isGreyed ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
+                        {name}
+                      </span>
+                    </div>
                     {phase === "Combat" ? (
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="text-right text-sm tabular-nums font-medium text-zinc-600 dark:text-zinc-400">
                           AC {armorClass}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => canLink && toggleLink(id)}
+                          disabled={!canLink}
+                          title={canLink ? (isLinkedToActive ? "Unlink from active" : "Link to active") : "Select active combatant first"}
+                          className={`shrink-0 rounded p-1 transition-colors ${canLink ? "hover:bg-zinc-200 dark:hover:bg-zinc-700" : "cursor-default opacity-50"}`}
+                          aria-label={isLinkedToActive ? `${name} linked to active` : `Link ${name} to active combatant`}
+                        >
+                          <FontAwesomeIcon
+                            icon={faLink}
+                            className={`text-xs ${isLinkedToActive ? "text-amber-600 dark:text-amber-400" : "text-zinc-500 dark:text-zinc-400"}`}
+                          />
+                        </button>
                         <button
                           type="button"
                           onClick={() => !incapacitatedIds.has(id) && removeFromCombatants(id)}
