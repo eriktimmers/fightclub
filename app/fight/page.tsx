@@ -95,6 +95,7 @@ export default function FightPage() {
   const [loadingCharacters, setLoadingCharacters] = useState(true);
   const [diceModalOpen, setDiceModalOpen] = useState(false);
   const [attackModalOpen, setAttackModalOpen] = useState(false);
+  const [attackModalAutoRoll, setAttackModalAutoRoll] = useState(false);
   const [opponentDetailId, setOpponentDetailId] = useState<string | null>(null);
   const [fullOpponent, setFullOpponent] = useState<Opponent | null>(null);
   const [fullOpponentLoading, setFullOpponentLoading] = useState(false);
@@ -326,7 +327,10 @@ export default function FightPage() {
           </button>
           <button
             type="button"
-            onClick={() => setAttackModalOpen(true)}
+            onClick={() => {
+              setAttackModalAutoRoll(false);
+              setAttackModalOpen(true);
+            }}
             className="flex items-center gap-2 rounded-lg bg-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             aria-label="Open attack roller"
           >
@@ -760,7 +764,7 @@ export default function FightPage() {
               aria-modal="true"
               aria-labelledby="opponent-detail-title"
             >
-              <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                 <h2 id="opponent-detail-title" className="mb-3 text-lg font-semibold text-zinc-800 dark:text-zinc-200">
                   {opp?.name ?? fallback.name}
                 </h2>
@@ -769,137 +773,143 @@ export default function FightPage() {
                 ) : fullOpponentError ? (
                   <p className="text-sm text-amber-600 dark:text-amber-400">{fullOpponentError}</p>
                 ) : opp ? (
-                  <dl className="space-y-2 text-sm">
-                    <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Type</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.type}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Alignment</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.alignment}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Hit points</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.hitPoints}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Armor class</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.armorClass}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Initiative bonus</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">{opp.initiativeBonus ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Ability scores</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">
-                        STR {opp.strength ?? 11}, DEX {opp.dexterity ?? 11}, CON {opp.constitution ?? 11}, INT {opp.intelligence ?? 11}, WIS {opp.wisdom ?? 11}, CHA {opp.charisma ?? 11}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-zinc-500 dark:text-zinc-400">Saving throws</dt>
-                      <dd className="text-zinc-800 dark:text-zinc-200">
-                        {[
-                          { label: "Reflex", bonus: opp.savingThrowDex ?? 0 },
-                          { label: "Fortitude", bonus: opp.savingThrowCon ?? 0 },
-                          { label: "Will", bonus: opp.savingThrowWis ?? 0 },
-                        ].map(({ label, bonus }) => (
-                          <button
-                            key={label}
-                            type="button"
-                            onClick={() => {
-                              dispatch(setSides(20));
-                              dispatch(setCount(1));
-                              dispatch(setPerDieBonus(bonus));
-                              dispatch(setTotalBonus(0));
-                              dispatch(setResults([]));
-                              setDiceModalOpen(true);
-                            }}
-                            className="mr-2 rounded px-1.5 py-0.5 font-medium text-zinc-800 underline-offset-2 hover:bg-zinc-200 hover:underline dark:text-zinc-200 dark:hover:bg-zinc-700"
-                          >
-                            {label} {bonus}
-                          </button>
-                        ))}
-                      </dd>
-                    </div>
-                    {opp.actions?.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <dl className="space-y-2 text-sm">
                       <div>
-                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Actions</dt>
-                        <dd className="mt-1 text-zinc-800 dark:text-zinc-200">
-                          <ul className="list-none space-y-2">
-                            {opp.actions.map((action, i) => {
-                              const act = typeof action === "string" ? null : action;
-                              const isMelee = act?.type === "melee";
-                              const isRanged = act?.type === "ranged";
-                              const isSpell = act?.type === "spell";
-                              const actionName = act && (isMelee || isRanged)
-                                ? (act as MeleeAction | RangedAction).name ?? (isMelee ? "Melee" : "Ranged")
-                                : isSpell
-                                  ? (act as SpellAction).spellName ?? "Spell"
-                                  : null;
-                              const damageStr =
-                                act && (isMelee || isRanged)
-                                  ? (act as MeleeAction | RangedAction).damage
-                                  : isSpell
-                                    ? (act as SpellAction).damage
-                                    : undefined;
-                              const damageParsed = damageStr ? parseDamage(damageStr) : null;
-                              const openAttackRoller = () => {
-                                if (act && (isMelee || isRanged)) {
-                                  const a = act as MeleeAction | RangedAction;
-                                  dispatch(setBonus(a.attackBonus ?? 0));
-                                  const cr = (a.criticalRange === "18-20" || a.criticalRange === "19-20" || a.criticalRange === "20")
-                                    ? a.criticalRange as CriticalRange
-                                    : "none";
-                                  dispatch(setCriticalRange(cr));
-                                  setAttackModalOpen(true);
-                                }
-                              };
-                              const openDamageRoller = () => {
-                                if (damageParsed) {
-                                  dispatch(setSides(damageParsed.sides));
-                                  dispatch(setCount(damageParsed.count));
-                                  const oneDie = damageParsed.count === 1;
-                                  dispatch(setPerDieBonus(oneDie ? damageParsed.totalBonus : 0));
-                                  dispatch(setTotalBonus(oneDie ? 0 : damageParsed.totalBonus));
-                                  dispatch(setResults([]));
-                                  setDiceModalOpen(true);
-                                }
-                              };
-                              return (
-                                <li key={i} className="flex flex-wrap items-center gap-2">
-                                  {actionName != null ? (
-                                    <span className="font-medium">{actionName}</span>
-                                  ) : null}
-                                  <span className="text-zinc-600 dark:text-zinc-400">
-                                    {formatActionLabel(action)}
-                                  </span>
-                                  {(isMelee || isRanged) ? (
-                                    <button
-                                      type="button"
-                                      onClick={openAttackRoller}
-                                      className="rounded bg-zinc-800 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
-                                    >
-                                      Attack
-                                    </button>
-                                  ) : null}
-                                  {damageParsed ? (
-                                    <button
-                                      type="button"
-                                      onClick={openDamageRoller}
-                                      className="rounded border border-zinc-400 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-500 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                                    >
-                                      Damage
-                                    </button>
-                                  ) : null}
-                                </li>
-                              );
-                            })}
-                          </ul>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Type</dt>
+                        <dd className="text-zinc-800 dark:text-zinc-200">{opp.type}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Alignment</dt>
+                        <dd className="text-zinc-800 dark:text-zinc-200">{opp.alignment}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Hit points</dt>
+                        <dd className="text-zinc-800 dark:text-zinc-200">{opp.hitPoints}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Armor class</dt>
+                        <dd className="text-zinc-800 dark:text-zinc-200">{opp.armorClass}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Initiative bonus</dt>
+                        <dd className="text-zinc-800 dark:text-zinc-200">{opp.initiativeBonus ?? 0}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Ability scores</dt>
+                        <dd className="text-zinc-800 dark:text-zinc-200">
+                          STR {opp.strength ?? 11}, DEX {opp.dexterity ?? 11}, CON {opp.constitution ?? 11}, INT {opp.intelligence ?? 11}, WIS {opp.wisdom ?? 11}, CHA {opp.charisma ?? 11}
                         </dd>
                       </div>
-                    ) : null}
-                  </dl>
+                      <div>
+                        <dt className="font-medium text-zinc-500 dark:text-zinc-400">Saving throws</dt>
+                        <dd className="text-zinc-800 dark:text-zinc-200">
+                          {[
+                            { label: "Reflex", bonus: opp.savingThrowDex ?? 0 },
+                            { label: "Fortitude", bonus: opp.savingThrowCon ?? 0 },
+                            { label: "Will", bonus: opp.savingThrowWis ?? 0 },
+                          ].map(({ label, bonus }) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => {
+                                dispatch(setSides(20));
+                                dispatch(setCount(1));
+                                dispatch(setPerDieBonus(bonus));
+                                dispatch(setTotalBonus(0));
+                                dispatch(setResults([]));
+                                setDiceModalOpen(true);
+                              }}
+                              className="mr-2 rounded px-1.5 py-0.5 font-medium text-zinc-800 underline-offset-2 hover:bg-zinc-200 hover:underline dark:text-zinc-200 dark:hover:bg-zinc-700"
+                            >
+                              {label} {bonus}
+                            </button>
+                          ))}
+                        </dd>
+                      </div>
+                    </dl>
+                    {opp.actions?.length > 0 ? (
+                      <div>
+                        <h3 className="mb-2 font-medium text-zinc-500 dark:text-zinc-400">Actions</h3>
+                        <ul className="list-none space-y-2 text-sm text-zinc-800 dark:text-zinc-200">
+                          {opp.actions.map((action, i) => {
+                            const act = typeof action === "string" ? null : action;
+                            const isMelee = act?.type === "melee";
+                            const isRanged = act?.type === "ranged";
+                            const isSpell = act?.type === "spell";
+                            const actionName = act && (isMelee || isRanged)
+                              ? (act as MeleeAction | RangedAction).name ?? (isMelee ? "Melee" : "Ranged")
+                              : isSpell
+                                ? (act as SpellAction).spellName ?? "Spell"
+                                : null;
+                            const damageStr =
+                              act && (isMelee || isRanged)
+                                ? (act as MeleeAction | RangedAction).damage
+                                : isSpell
+                                  ? (act as SpellAction).damage
+                                  : undefined;
+                            const damageParsed = damageStr ? parseDamage(damageStr) : null;
+                            const openAttackRoller = () => {
+                              if (act && (isMelee || isRanged)) {
+                                const a = act as MeleeAction | RangedAction;
+                                dispatch(setBonus(a.attackBonus ?? 0));
+                                const cr = (a.criticalRange === "18-20" || a.criticalRange === "19-20" || a.criticalRange === "20")
+                                  ? a.criticalRange as CriticalRange
+                                  : "none";
+                                dispatch(setCriticalRange(cr));
+                                setAttackModalAutoRoll(true);
+                                setAttackModalOpen(true);
+                              }
+                            };
+                            const openDamageRoller = () => {
+                              if (damageParsed) {
+                                dispatch(setSides(damageParsed.sides));
+                                dispatch(setCount(damageParsed.count));
+                                const oneDie = damageParsed.count === 1;
+                                dispatch(setPerDieBonus(oneDie ? damageParsed.totalBonus : 0));
+                                dispatch(setTotalBonus(oneDie ? 0 : damageParsed.totalBonus));
+                                dispatch(setResults([]));
+                                setDiceModalOpen(true);
+                              }
+                            };
+                            return (
+                              <li key={i} className="flex flex-wrap items-center gap-2">
+                                {actionName != null ? (
+                                  <span className="font-medium">{actionName}</span>
+                                ) : null}
+                                <span className="text-zinc-600 dark:text-zinc-400">
+                                  {formatActionLabel(action)}
+                                </span>
+                                {(isMelee || isRanged) ? (
+                                  <button
+                                    type="button"
+                                    onClick={openAttackRoller}
+                                    className="rounded bg-zinc-800 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                                  >
+                                    Attack
+                                  </button>
+                                ) : null}
+                                {damageParsed ? (
+                                  <button
+                                    type="button"
+                                    onClick={openDamageRoller}
+                                    className="rounded border border-zinc-400 bg-white px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-500 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                                  >
+                                    Damage
+                                  </button>
+                                ) : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ) : (
+                      <div>
+                        <h3 className="mb-2 font-medium text-zinc-500 dark:text-zinc-400">Actions</h3>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400">No actions</p>
+                      </div>
+                    )}
+                  </div>
                 ) : null}
                 <div className="mt-4 flex justify-end">
                   <button
@@ -1022,7 +1032,10 @@ export default function FightPage() {
               >
                 Close
               </button>
-              <AttackRoller />
+              <AttackRoller
+                autoRoll={attackModalAutoRoll}
+                onAutoRollDone={() => setAttackModalAutoRoll(false)}
+              />
             </div>
           </div>
         ) : null}

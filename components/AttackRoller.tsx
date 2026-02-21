@@ -1,13 +1,22 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { rollDie } from "@/lib/dice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setCriticalRange, setBonus, setResult } from "@/store/attackSlice";
 import type { CriticalRange } from "@/store/attackSlice";
 
-export default function AttackRoller() {
+type AttackRollerProps = {
+  /** When true, roll attack once on mount (e.g. when opened from opponent action). */
+  autoRoll?: boolean;
+  /** Called after an auto-roll has been performed. */
+  onAutoRollDone?: () => void;
+};
+
+export default function AttackRoller({ autoRoll = false, onAutoRollDone }: AttackRollerProps) {
   const dispatch = useAppDispatch();
   const { criticalRange, bonus, result } = useAppSelector((state) => state.attack);
+  const hasAutoRolled = useRef(false);
 
   const isCriticalHit = (roll: number, range: CriticalRange): boolean => {
     switch (range) {
@@ -55,6 +64,33 @@ export default function AttackRoller() {
   const handleBonusChange = (newBonus: number) => {
     dispatch(setBonus(newBonus));
   };
+
+  useEffect(() => {
+    if (autoRoll && !hasAutoRolled.current) {
+      hasAutoRolled.current = true;
+      const initialRoll = rollDie(20);
+      const initialTotal = initialRoll + bonus;
+      const isCritical = isCriticalHit(initialRoll, criticalRange);
+      if (isCritical) {
+        const confirmRoll = rollDie(20);
+        const confirmTotal = confirmRoll + bonus;
+        dispatch(setResult({
+          initialRoll,
+          initialTotal,
+          isCritical,
+          confirmRoll,
+          confirmTotal,
+        }));
+      } else {
+        dispatch(setResult({
+          initialRoll,
+          initialTotal,
+          isCritical: false,
+        }));
+      }
+      onAutoRollDone?.();
+    }
+  }, [autoRoll, bonus, criticalRange, dispatch, onAutoRollDone]);
 
   return (
     <div className="w-full max-w-2xl rounded-lg border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
